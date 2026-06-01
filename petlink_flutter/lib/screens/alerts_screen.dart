@@ -278,7 +278,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
         label,
         style: TextStyle(
           fontSize: 11,
-          fontWeight: isSelected ? FontWeight.black : FontWeight.bold,
+          fontWeight: isSelected ? FontWeight.w900 : FontWeight.bold,
           color: isSelected
               ? Colors.white
               : (isDark ? Colors.white70 : Colors.black87),

@@ -111,7 +111,7 @@ class ScheduleScreen extends StatelessWidget {
                             children: [
                               Text(
                                 schedule.time,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.black),
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                               ),
                               if (isFood && schedule.validateWithAI) ...[
                                 const SizedBox(width: 8),
@@ -130,7 +130,7 @@ class ScheduleScreen extends StatelessWidget {
                                         style: TextStyle(
                                           color: Color(0xFFE67E22),
                                           fontSize: 8,
-                                          fontWeight: FontWeight.black,
+                                          fontWeight: FontWeight.w900,
                                         ),
                                       ),
                                     ],
@@ -212,7 +212,7 @@ class ScheduleScreen extends StatelessWidget {
                             isFood ? '${schedule.portionGrams}g' : '${schedule.portionGrams}ml',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.black,
+                              fontWeight: FontWeight.w900,
                               color: isFood ? theme.primaryColor : Colors.blue,
                             ),
                           ),
@@ -258,7 +258,7 @@ class ScheduleScreen extends StatelessWidget {
               children: [
                 Row(
                   children: const [
-                    Icon(LucideIcons.alertTriangle, color: Colors.orange, size: 20),
+                    Icon(LucideIcons.triangleAlert, color: Colors.orange, size: 20),
                     SizedBox(width: 8),
                     Text(
                       'Límites Diarios y Prevención',
@@ -281,7 +281,7 @@ class ScheduleScreen extends StatelessWidget {
                     ),
                     Text(
                       '${todayFoodConsumed.round()}g / ${maxFoodPerDay.round()}g',
-                      style: const TextStyle(fontWeight: FontWeight.black, fontSize: 12),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
                     ),
                   ],
                 ),
@@ -372,7 +372,7 @@ class ScheduleScreen extends StatelessWidget {
         ),
         Text(
           value,
-          style: const TextStyle(fontWeight: FontWeight.black, fontSize: 11),
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
         ),
       ],
     );

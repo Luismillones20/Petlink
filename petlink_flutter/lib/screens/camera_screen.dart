@@ -253,7 +253,7 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
                           '${state.aiConfidenceThreshold.round()}%',
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.black,
+                            fontWeight: FontWeight.w900,
                             color: theme.primaryColor,
                           ),
                         ),
@@ -365,7 +365,7 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
                               snap['confidence']!,
                               style: TextStyle(
                                 fontSize: 8,
-                                fontWeight: FontWeight.black,
+                                fontWeight: FontWeight.w900,
                                 color: isMax ? Colors.green : Colors.red,
                               ),
                             ),
@@ -720,7 +720,7 @@ class SurveillanceBracketsPainter extends CustomPainter {
     canvas.drawLine(Offset(size.width, 0), Offset(size.width, len), paint);
 
     // Bottom Left
-    canvas.drawLine(Offset(0, size.height), const Offset(len, size.height), paint);
+    canvas.drawLine(Offset(0, size.height), Offset(len, size.height), paint);
     canvas.drawLine(Offset(0, size.height), Offset(0, size.height - len), paint);
 
     // Bottom Right

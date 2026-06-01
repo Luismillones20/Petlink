@@ -128,7 +128,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                               children: [
                                 Text(
                                   '${state.todayWaterIntake.round()}',
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.black),
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                                 ),
                                 const Text(
                                   'mL / 600',
@@ -189,7 +189,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                               children: [
                                 Text(
                                   '${state.todayCalorieIntake.round()}',
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.black),
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
                                 ),
                                 const Text(
                                   'kcal / 900',
@@ -630,7 +630,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                 const SizedBox(height: 20),
                 const Text(
                   '98/100',
-                  style: TextStyle(fontSize: 48, fontWeight: FontWeight.black, color: Colors.green),
+                  style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, color: Colors.green),
                 ),
                 const SizedBox(height: 6),
                 const Text(

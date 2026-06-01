@@ -43,6 +43,13 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
   }
 
   String _getApiKey() {
+    // 1. Try compile-time environment variable (e.g. from --dart-define or --dart-define-from-file)
+    const compileTimeKey = String.fromEnvironment('VITE_GEMINI_API_KEY');
+    if (compileTimeKey.isNotEmpty) {
+      return compileTimeKey;
+    }
+
+    // 2. Fallback to local file reading for dev environments
     try {
       final file = File('../.env');
       if (file.existsSync()) {

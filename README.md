@@ -33,29 +33,94 @@ $env:PATH = "c:\Users\marco\Petlink\node-v22.12.0-win-x64;" + $env:PATH
 
 ---
 
-## 📱 2. Cómo ejecutar la aplicación MÓVIL (Flutter)
+## 📱 2. Cómo ejecutar y compilar la aplicación MÓVIL (Flutter)
 
-La aplicación móvil está construida con **Flutter** para ser compilada en dispositivos Android.
+La aplicación móvil está construida con **Flutter**. Gracias a su soporte multiplataforma, puedes compilarla para **Android (APK)** y también para **iOS** (si estás en macOS).
 
-### Requisitos Previos
-1.  Instala el SDK de Flutter en tu sistema local siguiendo la [Guía Oficial de Flutter](https://docs.flutter.dev/get-started/install).
-2.  Asegúrate de agregar la ruta `/bin` de tu instalación de Flutter a las **Variables de Entorno (PATH)** de tu máquina.
-
-### Pasos para iniciar la app:
-1.  Abre una terminal en la subcarpeta del proyecto móvil:
-    ```bash
-    cd petlink_flutter
-    ```
-2.  Descarga las dependencias necesarias de Dart y Flutter:
-    ```bash
-    flutter pub get
-    ```
-3.  Asegúrate de tener un emulador de Android abierto o tu teléfono físico conectado en modo de depuración USB, y ejecuta la app:
-    ```bash
-    flutter run
-    ```
+### 📋 Requisitos Previos Generales
+1. Instala el SDK de Flutter en tu sistema local siguiendo la [Guía Oficial de Flutter](https://docs.flutter.dev/get-started/install).
+2. Asegúrate de agregar la ruta `/bin` de tu instalación de Flutter a las **Variables de Entorno (PATH)** de tu máquina.
 
 ---
+
+### 💻 Guía de Compilación en Windows (Android APK)
+
+1. Abre tu terminal de PowerShell en la subcarpeta:
+   ```powershell
+   cd petlink_flutter
+   ```
+2. Si es la primera vez, genera los archivos del proyecto Android:
+   ```powershell
+   flutter create . --platforms=android
+   ```
+3. Descarga las dependencias del proyecto:
+   ```powershell
+   flutter pub get
+   ```
+4. Genera el APK ejecutable inyectando de forma segura la API Key de tu `.env` a nivel raíz:
+   ```powershell
+   flutter build apk --release --dart-define-from-file=../.env
+   ```
+   El APK compilado se guardará en: `petlink_flutter/build/app/outputs/flutter-apk/app-release.apk`
+
+---
+
+### 🍎 Guía de Instalación y Compilación en macOS (Mac)
+
+macOS permite compilar y ejecutar tanto para **Android** como para **iOS**:
+
+#### A. Preparación del Entorno en Mac
+1. **Instalar Homebrew** (si no está instalado):
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+2. **Instalar Flutter SDK:**
+   ```bash
+   brew install --cask flutter
+   ```
+3. **Verificar el sistema:**
+   ```bash
+   flutter doctor
+   ```
+
+#### B. Compilar para Android (APK) en Mac
+1. Descarga e instala [Android Studio](https://developer.android.com/studio) para Mac.
+2. Abre Android Studio > SDK Manager e instala el SDK y las **Android SDK Command-line Tools**.
+3. Acepta las licencias en tu terminal:
+   ```bash
+   flutter doctor --android-licenses
+   ```
+4. Compila el APK inyectando las credenciales de tu `.env`:
+   ```bash
+   cd petlink_flutter
+   flutter pub get
+   flutter build apk --release --dart-define-from-file=../.env
+   ```
+
+#### C. Compilar para iOS en Mac (Requiere Xcode)
+1. Instala Xcode desde la App Store de Mac.
+2. Configura las herramientas CLI de Xcode:
+   ```bash
+   sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+   sudo xcodebuild -runFirstLaunch
+   ```
+3. Instala CocoaPods (gestor de dependencias de iOS):
+   ```bash
+   brew install cocoapods
+   ```
+4. Prepara y compila la app móvil para iOS:
+   ```bash
+   cd petlink_flutter
+   flutter pub get
+   cd ios
+   pod install
+   cd ..
+   flutter build ios --release --dart-define-from-file=../.env
+   ```
+   *(Nota: Abre `ios/Runner.xcworkspace` en Xcode para configurar tu cuenta en "Signing & Capabilities" si deseas probarlo en un iPhone físico).*
+
+---
+
 
 ## 📊 Características Destacadas de Estadísticas y Salud
 -   **HX711 Ingestion Speed:** Mide la velocidad de alimentación de Max (óptima: 1.5 a 2.5 g/s) para prevenir torsiones estomacales.

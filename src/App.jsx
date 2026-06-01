@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Home, Video, Calendar, Bell, Settings, 
   Droplet, Bone, Activity, Wifi, Mic, Volume2, 
-  Plus, Check, X, Shield, PawPrint, Battery
+  Plus, Check, X, Shield, PawPrint, Battery,
+  ChevronRight, ChevronLeft, TrendingUp, Sparkles, Heart
 } from 'lucide-react';
 import './index.css';
 
@@ -10,6 +11,18 @@ import './index.css';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // --- HEALTH & STATS ENGINE STATE ---
+  const [todayFoodIntake, setTodayFoodIntake] = useState(160);
+  const [todayWaterIntake, setTodayWaterIntake] = useState(450);
+  const petWeight = 25.0; // kg
+  const dailyCaloricTarget = 900; // kcal
+  const dailyWaterTarget = 600; // mL
+  const dailyFoodTarget = 240; // g
+  const eatingSpeed = 1.8; // g/s
+  const [todayFeedingLogs, setTodayFeedingLogs] = useState([
+    { time: '08:00 AM', amount: 80, type: 'Programado' }
+  ]);
   
   // Simulated Sensor Data
   const [foodLevel, setFoodLevel] = useState(65); // %
@@ -56,11 +69,18 @@ export default function App() {
   const handleManualFeed = () => {
     setFoodLevel(prev => Math.min(100, prev + 10));
     setFoodWeight(prev => prev + 50);
-    setLastFed(`Hoy, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setLastFed(`Hoy, ${nowStr}`);
+    setTodayFoodIntake(prev => prev + 50);
+    setTodayFeedingLogs(prev => [
+      ...prev,
+      { time: nowStr, amount: 50, type: 'Manual' }
+    ]);
   };
 
   const handleManualWater = () => {
     setWaterLevel(prev => Math.min(100, prev + 25));
+    setTodayWaterIntake(prev => prev + 150);
   };
 
   const pendingAlertsCount = alerts.filter(a => a.status === 'pending').length;
@@ -99,6 +119,20 @@ export default function App() {
           <DashboardScreen 
             foodLevel={foodLevel} waterLevel={waterLevel} foodWeight={foodWeight}
             lastFed={lastFed} onFeed={handleManualFeed} onWater={handleManualWater}
+            onOpenStats={() => setActiveTab('statistics')}
+          />
+        )}
+        {activeTab === 'statistics' && (
+          <StatisticsScreen 
+            todayFoodIntake={todayFoodIntake}
+            todayWaterIntake={todayWaterIntake}
+            petWeight={petWeight}
+            dailyCaloricTarget={dailyCaloricTarget}
+            dailyWaterTarget={dailyWaterTarget}
+            dailyFoodTarget={dailyFoodTarget}
+            eatingSpeed={eatingSpeed}
+            todayFeedingLogs={todayFeedingLogs}
+            onClose={() => setActiveTab('dashboard')}
           />
         )}
         {activeTab === 'camera' && <CameraScreen />}
@@ -157,7 +191,21 @@ function ProgressBar({ value, color, icon }) {
 
 // --- SCREENS ---
 
-function DashboardScreen({ foodLevel, waterLevel, foodWeight, lastFed, onFeed, onWater }) {
+function DashboardScreen({ foodLevel, waterLevel, foodWeight, lastFed, onFeed, onWater, onOpenStats }) {
+  // Determine weight status text and color
+  let weightStatus = 'Estable';
+  let weightStatusColor = 'var(--success)';
+  if (foodWeight <= 20) {
+    weightStatus = 'Vacío';
+    weightStatusColor = 'var(--danger)';
+  } else if (foodWeight <= 80) {
+    weightStatus = 'Bajo';
+    weightStatusColor = 'var(--warning)';
+  } else if (foodWeight > 180) {
+    weightStatus = 'Ración Servida';
+    weightStatusColor = 'var(--primary)';
+  }
+
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
@@ -167,12 +215,43 @@ function DashboardScreen({ foodLevel, waterLevel, foodWeight, lastFed, onFeed, o
           <Activity color="var(--primary)" size={28} style={{ marginBottom: '8px' }} />
           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Peso del Plato</span>
           <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)' }}>{Math.round(foodWeight)}g</span>
+          <span style={{ fontSize: '0.7rem', color: weightStatusColor, fontWeight: 'bold', marginTop: '4px' }}>{weightStatus}</span>
         </div>
         <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px' }}>
           <Check color="var(--success)" size={28} style={{ marginBottom: '8px' }} />
           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Última Comida</span>
           <span style={{ fontSize: '0.95rem', fontWeight: '700', color: 'var(--text-primary)', textAlign: 'center', marginTop: '4px' }}>{lastFed}</span>
         </div>
+      </div>
+
+      {/* Premium Health Stats Link Banner */}
+      <div 
+        onClick={onOpenStats}
+        style={{
+          background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 100%)',
+          borderRadius: '16px',
+          padding: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          cursor: 'pointer',
+          boxShadow: 'var(--shadow-md)',
+          color: 'white',
+          transition: 'transform 0.2s ease'
+        }}
+        className="hover-scale"
+      >
+        <div style={{ backgroundColor: 'rgba(255,255,255,0.12)', padding: '10px', borderRadius: '50%', display: 'flex' }}>
+          <PawPrint color="var(--primary)" size={20} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: 'white' }}>Análisis de Salud de Max</h4>
+          <p style={{ margin: '3px 0 0 0', fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.35 }}>
+            Hidratación: Excelente • Ingesta: Saludable<br/>
+            Haz clic para ver estadísticas detalladas
+          </p>
+        </div>
+        <ChevronRight size={18} color="rgba(255,255,255,0.7)" />
       </div>
 
       {/* Contenedores */}
@@ -427,3 +506,391 @@ function ConfigScreen({ isDarkMode, setIsDarkMode }) {
     </div>
   );
 }
+
+// --- NEW COMPONENT: ADVANCED HEALTH STATISTICS SCREEN ---
+function StatisticsScreen({ 
+  todayFoodIntake, todayWaterIntake, petWeight, 
+  dailyCaloricTarget, dailyWaterTarget, dailyFoodTarget, 
+  eatingSpeed, todayFeedingLogs, onClose 
+}) {
+  const [activeSubTab, setActiveSubTab] = useState('diario');
+
+  const foodPercent = Math.min(1.0, todayFoodIntake / dailyFoodTarget);
+  const waterPercent = Math.min(1.0, todayWaterIntake / dailyWaterTarget);
+  const caloriePercent = Math.min(1.0, (todayFoodIntake * 3.75) / dailyCaloricTarget);
+  const todayCalorieIntake = todayFoodIntake * 3.75;
+  const mlPerKg = todayWaterIntake / petWeight;
+
+  let hydrationStatus = 'Insuficiente';
+  let hydrationColor = 'var(--warning)';
+  if (mlPerKg >= 45.0) {
+    hydrationStatus = 'Excelente';
+    hydrationColor = 'var(--success)';
+  } else if (mlPerKg >= 30.0) {
+    hydrationStatus = 'Bueno';
+    hydrationColor = '#3498DB';
+  }
+
+  // Monthly Data
+  const monthlyFoodHistory = [22.0, 24.5, 21.0, 25.8, 23.4, 24.0]; // in kg
+  const monthlyWaterHistory = [7.5, 8.2, 7.0, 8.8, 8.1, 8.3]; // in Liters
+  const monthLabels = ['Dic', 'Ene', 'Feb', 'Mar', 'Abr', 'May'];
+
+  return (
+    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+        <button 
+          onClick={onClose} 
+          style={{ 
+            background: 'none', border: 'none', cursor: 'pointer', 
+            color: 'var(--text-primary)', display: 'flex', padding: '4px' 
+          }}
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 'bold' }}>Estadísticas de Salud</h2>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ 
+        display: 'flex', borderBottom: '1px solid var(--border-color)', 
+        marginBottom: '8px', width: '100%' 
+      }}>
+        {['diario', 'mensual', 'salud'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveSubTab(tab)}
+            style={{
+              flex: 1,
+              padding: '12px 0',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeSubTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeSubTab === tab ? 'var(--primary)' : 'var(--text-secondary)',
+              fontWeight: 'bold',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              textTransform: 'capitalize'
+            }}
+          >
+            {tab === 'salud' ? 'Análisis de Salud' : tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {activeSubTab === 'diario' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Progress Circles */}
+          <div style={{ display: 'flex', gap: '16px' }}>
+            {/* Hydration */}
+            <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                Hidratación de Hoy
+              </span>
+              <div style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <svg width="90" height="90" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="rgba(52, 152, 219, 0.1)"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="#3498DB"
+                    strokeWidth="3"
+                    strokeDasharray={`${waterPercent * 100}, 100`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{Math.round(todayWaterIntake)}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>mL / 600</span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: waterPercent >= 1 ? 'var(--success)' : '#3498DB', marginTop: '12px' }}>
+                {waterPercent >= 1 ? '¡Meta Completada!' : `Faltan ${Math.max(0, 600 - todayWaterIntake)} mL`}
+              </span>
+            </div>
+
+            {/* Calories */}
+            <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                Calorías Activas
+              </span>
+              <div style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <svg width="90" height="90" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="rgba(243, 156, 18, 0.1)"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="var(--primary)"
+                    strokeWidth="3"
+                    strokeDasharray={`${caloriePercent * 100}, 100`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{Math.round(todayCalorieIntake)}</span>
+                  <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>kcal / 900</span>
+                </div>
+              </div>
+              <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--primary)', marginTop: '12px' }}>
+                Comida: {Math.round(todayFoodIntake)}g servidos
+              </span>
+            </div>
+          </div>
+
+          {/* Eating Speed */}
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>Velocidad de Ingesta (HX711)</span>
+              <span style={{ 
+                fontSize: '0.7rem', fontWeight: 'bold', backgroundColor: 'rgba(46, 204, 113, 0.15)', 
+                color: 'var(--success)', padding: '2px 8px', borderRadius: '10px' 
+              }}>Saludable</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ backgroundColor: 'rgba(26, 188, 156, 0.1)', padding: '10px', borderRadius: '50%', display: 'flex' }}>
+                <Activity size={22} color="#1ABC9C" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.3rem', fontWeight: '900' }}>{eatingSpeed} g/segundo</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Calculado dinámicamente por la balanza del plato</div>
+              </div>
+            </div>
+            {/* Visual Gauge */}
+            <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-color)', borderRadius: '10px', position: 'relative', overflow: 'hidden', marginBottom: '6px' }}>
+              <div style={{ 
+                width: `${(eatingSpeed / 4.0) * 100}%`, height: '100%', 
+                background: 'linear-gradient(to right, var(--success), var(--warning), var(--danger))',
+                borderRadius: '10px'
+              }}></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: 'var(--text-secondary)' }}>
+              <span>Lento (&lt; 1.0)</span>
+              <span style={{ color: 'var(--success)', fontWeight: 'bold' }}>Óptimo (1.5 - 2.5)</span>
+              <span>Rápido (&gt; 3.0)</span>
+            </div>
+            <div style={{ 
+              marginTop: '12px', padding: '10px', backgroundColor: 'rgba(26, 188, 156, 0.05)', 
+              borderRadius: '8px', border: '1px solid rgba(26, 188, 156, 0.1)',
+              display: 'flex', alignItems: 'center', gap: '8px'
+            }}>
+              <Heart size={12} color="#1ABC9C" />
+              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                Max tiene un ritmo excelente. Esto previene torsiones gástricas y asfixias.
+              </span>
+            </div>
+          </div>
+
+          {/* Today's logs */}
+          <div className="card">
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 'bold', margin: '0 0 12px 0' }}>Registro de Ingestas Hoy</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {todayFeedingLogs.map((log, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: idx < todayFeedingLogs.length - 1 ? '8px' : '0', borderBottom: idx < todayFeedingLogs.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ 
+                      backgroundColor: log.type === 'Manual' ? 'rgba(243, 156, 18, 0.12)' : 'rgba(46, 204, 113, 0.12)', 
+                      padding: '6px', borderRadius: '50%', display: 'flex' 
+                    }}>
+                      <Bone size={12} color={log.type === 'Manual' ? 'var(--primary)' : 'var(--success)'} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                        {log.type === 'Manual' ? 'Dosificación Manual' : 'Horario Programado'}
+                      </div>
+                      <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>{log.time}</div>
+                    </div>
+                  </div>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#16A085' }}>+{log.amount}g</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'mensual' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Bar Chart */}
+          <div className="card">
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 'bold', margin: '0 0 4px 0' }}>Comparativa Histórica Mensual</h3>
+            <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', margin: '0 0 20px 0' }}>Últimos 6 meses de consumo acumulado</p>
+            
+            {/* Custom Flex Bar Chart */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', height: '140px', alignItems: 'flex-end', borderBottom: '2px solid var(--border-color)', paddingBottom: '8px', marginBottom: '8px' }}>
+              {monthlyFoodHistory.map((food, idx) => {
+                const water = monthlyWaterHistory[idx];
+                const foodHeightPct = (food / 30.0) * 100;
+                const waterHeightPct = (water / 30.0) * 100;
+
+                return (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '100%', width: '100%', justifyContent: 'center' }}>
+                      {/* Food Bar (Orange) */}
+                      <div style={{ 
+                        width: '8px', height: `${foodHeightPct}%`, 
+                        background: 'linear-gradient(to top, var(--primary), #E67E22)', 
+                        borderRadius: '3px 3px 0 0' 
+                      }}></div>
+                      {/* Water Bar (Blue) */}
+                      <div style={{ 
+                        width: '8px', height: `${waterHeightPct}%`, 
+                        background: 'linear-gradient(to top, #3498DB, #2980B9)', 
+                        borderRadius: '3px 3px 0 0' 
+                      }}></div>
+                    </div>
+                    <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginTop: '6px' }}>
+                      {monthLabels[idx]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '10px', height: '10px', backgroundColor: 'var(--primary)', borderRadius: '2px' }}></div>
+                <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Comida (kg)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '10px', height: '10px', backgroundColor: '#3498DB', borderRadius: '2px' }}></div>
+                <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Agua (L)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Monthly stats cards */}
+          <div className="card">
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 'bold', margin: '0 0 16px 0' }}>Resumen de Tendencia Mensual</h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ backgroundColor: 'rgba(46, 204, 113, 0.1)', padding: '6px', borderRadius: '50%', display: 'flex' }}>
+                  <TrendingUp size={16} color="var(--success)" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Consumo comida promedio</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '900' }}>23.8 kg / mes</div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Estable en rango del Golden Retriever</div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ backgroundColor: 'rgba(52, 152, 219, 0.1)', padding: '6px', borderRadius: '50%', display: 'flex' }}>
+                  <Droplet size={16} color="#3498DB" />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Consumo agua promedio</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: '900' }}>8.1 L / mes</div>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>Perfecta hidratación del 100%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSubTab === 'salud' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Health Index */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, rgba(243, 156, 18, 0.12) 0%, rgba(230, 126, 34, 0.04) 100%)',
+            borderRadius: '16px', border: '1px solid rgba(243, 156, 18, 0.3)', padding: '16px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center'
+          }}>
+            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <PawPrint size={14} color="var(--primary)" />
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Índice de Salud de Max</span>
+              </div>
+              <Heart size={14} color="red" fill="red" />
+            </div>
+            <div style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--success)' }}>98/100</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+              Índice Altamente Favorable
+            </div>
+            <div style={{ width: '100%', height: '1px', backgroundColor: 'var(--border-color)', marginBottom: '12px' }}></div>
+            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-around' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--success)' }}>100%</span>
+                <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Nutrición</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#3498DB' }}>
+                  {Math.round((todayWaterIntake / dailyWaterTarget) * 100)}%
+                </span>
+                <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Hidratación</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--success)' }}>Excelente</span>
+                <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Ingesta</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Hydration calculation */}
+          <div className="card">
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 'bold', margin: '0 0 4px 0' }}>Cálculo de Hidratación por Peso</h3>
+            <p style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', margin: '0 0 16px 0' }}>
+              Meta veterinaria diaria: 40-50 mL por kilogramo de peso.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Ingesta actual por kg:</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: '900' }}>{mlPerKg.toFixed(1)} mL/kg</div>
+              </div>
+              <span style={{ 
+                fontSize: '0.75rem', fontWeight: 'bold', backgroundColor: hydrationColor === 'var(--success)' ? 'rgba(46, 204, 113, 0.15)' : 'rgba(52, 152, 219, 0.15)',
+                color: hydrationColor, padding: '4px 10px', borderRadius: '12px' 
+              }}>{hydrationStatus}</span>
+            </div>
+            {/* progress bar */}
+            <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--border-color)', borderRadius: '10px', overflow: 'hidden', marginBottom: '6px' }}>
+              <div style={{ width: `${Math.min(100, (mlPerKg / 50.0) * 100)}%`, height: '100%', backgroundColor: hydrationColor, borderRadius: '10px' }}></div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.55rem', color: 'var(--text-secondary)' }}>
+              <span>0 mL</span>
+              <span style={{ fontWeight: 'bold' }}>Meta: 45 mL/kg</span>
+              <span>50 mL+</span>
+            </div>
+          </div>
+
+          {/* AI recommendations */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+              <Sparkles size={14} color="var(--primary)" />
+              <h3 style={{ fontSize: '0.85rem', fontWeight: 'bold', margin: 0 }}>Recomendaciones de Salud de PetLink</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.68rem', lineHeight: 1.35, color: 'var(--text-secondary)' }}>
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>✓ Estabilidad de Peso:</strong> El sensor HX711 reporta estabilidad alimentaria perfecta sin anomalías (Max come la totalidad de sus porciones sin dejar sobras). Esto indica un apetito sano.
+              </div>
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>💧 Consumo de Agua:</strong> {mlPerKg < 35.0 ? 'Max ha bebido un poco menos del ideal hoy. Se recomienda un ciclo de agua adicional de 150ml.' : 'La relación peso/agua es óptima. Max mantiene hidratados los riñones. ¡Excelente trabajo!'}
+              </div>
+              <div>
+                <strong style={{ color: 'var(--text-primary)' }}>⏱️ Prevención de Obesidad:</strong> Según los 6 meses de datos históricos, Max mantiene una curva calórica lineal y perfecta de 900 kcal/día. Continúa con los horarios preestablecidos.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Keep the rest of the file...
+

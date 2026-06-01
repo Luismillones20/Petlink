@@ -2,8 +2,10 @@ class ScheduleModel {
   final int id;
   final String type; // 'food' or 'water'
   final String time;
-  final String amount;
+  String amount; // Portion string (e.g. '80g' or 'Llenar')
+  int portionGrams; // Portion quantity in grams (or ml)
   bool active;
+  bool validateWithAI; // Trigger ESP32-CAM AI Face detection first
 
   ScheduleModel({
     required this.id,
@@ -11,5 +13,7 @@ class ScheduleModel {
     required this.time,
     required this.amount,
     required this.active,
+    this.portionGrams = 80,
+    this.validateWithAI = false,
   });
 }

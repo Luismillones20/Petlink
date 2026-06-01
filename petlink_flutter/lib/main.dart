@@ -9,6 +9,7 @@ import 'screens/camera_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/alerts_screen.dart';
 import 'screens/config_screen.dart';
+import 'widgets/ai_chatbot_sheet.dart';
 
 void main() {
   runApp(
@@ -128,6 +129,19 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       body: _screens[_currentIndex],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => const AIChatbotSheet(),
+          );
+        },
+        backgroundColor: theme.primaryColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(LucideIcons.messageSquare, color: Colors.white),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),

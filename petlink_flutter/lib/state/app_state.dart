@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/alert.dart';
 import '../models/schedule.dart';
@@ -12,19 +14,6 @@ class AppState extends ChangeNotifier {
   String lastFed = 'Hoy, 08:30 AM';
   bool isConnected = true;
   bool isDarkMode = false;
-
-  // Connection Info (IoT Broker & Devices)
-  String brokerUrl = 'mqtt://broker.hivemq.com:1883';
-  String deviceId = 'ESP8266_UTEC_2026';
-  String arduinoIP = '192.168.1.150';
-  String esp32CamIP = '192.168.1.151';
-  int wifiSignal = -56; // dBm (RSSI)
-  int activeSolenoids = 0; // Simulated pin controls on Arduino Mega
-  
-  // Real-time analytics / Weight history
-  List<double> weightHistory = [120.0, 110.0, 95.0, 70.0, 50.0, 130.0, 120.0, 112.0, 105.0, 120.0];
-  List<double> foodConsumptionHistory = [75.0, 85.0, 60.0, 90.0, 80.0, 95.0, 80.0]; // Last 7 days in grams
-  List<double> waterConsumptionHistory = [250.0, 300.0, 280.0, 310.0, 290.0, 350.0, 270.0]; // Last 7 days in mL
 
   // --- HEALTH & STATS ENGINE VARIABLES ---
   double petWeight = 25.0; // kg (Max is a Golden Retriever)
@@ -48,6 +37,90 @@ class AppState extends ChangeNotifier {
     {'time': '08:00 AM', 'amount': 80, 'type': 'Programado'},
   ];
 
+  // Dynamic AI Recommendations state
+  List<String> aiRecommendations = [
+    "⏱️ Ritmo de alimentación óptimo registrado en la balanza HX711.",
+    "💧 Max mantiene un consumo de agua excelente de acuerdo a su peso corporal.",
+    "🍖 El balance calórico diario es correcto para su nivel de actividad física."
+  ];
+  bool loadingAiRecommendations = false;
+
+  String _getApiKey() {
+    try {
+      final file = File('../.env');
+      if (file.existsSync()) {
+        final lines = file.readAsLinesSync();
+        for (var line in lines) {
+          if (line.startsWith('VITE_GEMINI_API_KEY=')) {
+            return line.replaceFirst('VITE_GEMINI_API_KEY=', '').trim();
+          }
+        }
+      }
+    } catch (_) {}
+    return '';
+  }
+
+  Future<void> fetchAIRecommendations() async {
+    loadingAiRecommendations = true;
+    notifyListeners();
+
+    try {
+      final apiKey = _getApiKey();
+      if (apiKey.isEmpty) return;
+      
+      final client = HttpClient();
+      final uri = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey');
+      final request = await client.postUrl(uri);
+      request.headers.set('content-type', 'application/json');
+      
+      final body = {
+        'contents': [
+          {
+            'parts': [
+              {
+                'text': 'Genera exactamente 3 recomendaciones médicas de salud cortas y útiles de 1 línea cada una, con base en estos datos reales de un perro Golden Retriever de 25 kg llamado Max hoy:\n'
+                    '- Comida consumida hoy: ${todayFoodIntake.round()}g (meta 240g)\n'
+                    '- Agua consumida hoy: ${todayWaterIntake.round()}ml (meta 600ml)\n'
+                    '- Velocidad de ingesta: $eatingSpeed g/s (rango óptimo: 1.5 - 2.5 g/s)\n\n'
+                    'Devuelve una lista separada por saltos de línea con los 3 consejos (sin títulos, sin marcas de negrita, sin números, solo el texto del consejo directamente). Comienza cada uno con un emoji correspondiente (por ejemplo, ⏱️, 💧, 🍖).'
+              }
+            ]
+          }
+        ]
+      };
+      
+      request.write(json.encode(body));
+      final response = await request.close();
+      
+      if (response.statusCode == 200) {
+        final responseBody = await response.transform(utf8.decoder).join();
+        final data = json.decode(responseBody);
+        final String text = data['candidates'][0]['content']['parts'][0]['text'];
+        final list = text.split('\n').where((l) => l.trim().isNotEmpty).take(3).toList();
+        if (list.length >= 2) {
+          aiRecommendations = list;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    } finally {
+      loadingAiRecommendations = false;
+      notifyListeners();
+    }
+  }
+
+  // Connection Info (IoT Broker & Devices)
+  String brokerUrl = 'mqtt://broker.hivemq.com:1883';
+  String deviceId = 'ESP8266_UTEC_2026';
+  String arduinoIP = '192.168.1.150';
+  String esp32CamIP = '192.168.1.151';
+  int wifiSignal = -56; // dBm (RSSI)
+  int activeSolenoids = 0; // Simulated pin controls on Arduino Mega
+  
+  // Real-time analytics / Weight history
+  List<double> weightHistory = [120.0, 110.0, 95.0, 70.0, 50.0, 130.0, 120.0, 112.0, 105.0, 120.0];
+  List<double> foodConsumptionHistory = [75.0, 85.0, 60.0, 90.0, 80.0, 95.0, 80.0]; // Last 7 days in grams
+  List<double> waterConsumptionHistory = [250.0, 300.0, 280.0, 310.0, 290.0, 350.0, 270.0]; // Last 7 days in mL
   // AI & ESP32-CAM Configurations
   bool isAIEnabled = true;
   double aiConfidenceThreshold = 85.0; // %

@@ -18,6 +18,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppState>(context, listen: false).fetchAIRecommendations();
+    });
   }
 
   @override
@@ -762,32 +765,64 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(LucideIcons.sparkles, color: Color(0xFFF39C12), size: 16),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Recomendaciones de Salud de PetLink',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    Row(
+                      children: [
+                        const Icon(LucideIcons.sparkles, color: Color(0xFFF39C12), size: 16),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Recomendaciones IA PetLink',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        LucideIcons.rotateCw,
+                        size: 16,
+                        color: state.loadingAiRecommendations ? Colors.orange : Colors.grey,
+                      ),
+                      onPressed: state.loadingAiRecommendations
+                          ? null
+                          : () => state.fetchAIRecommendations(),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _buildRecommendationItem(
-                  '✓ Estabilidad de Peso:',
-                  'El sensor HX711 reporta estabilidad alimentaria perfecta sin anomalías (Max come la totalidad de sus porciones sin dejar sobras). Esto indica un apetito sano.',
-                ),
                 const SizedBox(height: 12),
-                _buildRecommendationItem(
-                  '💧 Consumo de Agua:',
-                  mlPerKg < 35.0
-                    ? 'Max ha bebido un poco menos del ideal hoy. Se recomienda un ciclo de agua adicional de 150ml.'
-                    : 'La relación peso/agua es óptima. Max mantiene hidratados los riñones. ¡Excelente trabajo!',
-                ),
-                const SizedBox(height: 12),
-                _buildRecommendationItem(
-                  '⏱️ Prevención de Obesidad:',
-                  'Según los 6 meses de datos históricos, Max mantiene una curva calórica lineal y perfecta de 900 kcal/día. Continúa con los horarios preestablecidos.',
-                ),
+                if (state.loadingAiRecommendations)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24.0),
+                      child: Column(
+                        children: [
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF39C12)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Generando recomendaciones de salud con IA...',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else ...[
+                  for (var rec in state.aiRecommendations) ...[
+                    _buildAiRecommendationItem(rec),
+                    const SizedBox(height: 12),
+                  ]
+                ],
               ],
             ),
           ),
@@ -813,18 +848,46 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildRecommendationItem(String title, String body) {
-    return Column(
+  Widget _buildAiRecommendationItem(String recommendation) {
+    String emoji = "✨";
+    String content = recommendation;
+    if (recommendation.isNotEmpty) {
+      final firstWord = recommendation.split(' ').first;
+      if (firstWord.length <= 4 && (firstWord.startsWith(RegExp(r'[\u{1F300}-\u{1F9FF}]')) || firstWord.codeUnits.any((u) => u > 255))) {
+        emoji = firstWord;
+        content = recommendation.substring(firstWord.length).trim();
+      }
+    }
+    
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.black),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF39C12).withOpacity(0.08),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            emoji,
+            style: const TextStyle(fontSize: 16),
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          body,
-          style: const TextStyle(fontSize: 10.5, color: Colors.grey, height: 1.35),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                content,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  height: 1.35,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

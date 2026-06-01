@@ -3,7 +3,8 @@ import {
   Home, Video, Calendar, Bell, Settings, 
   Droplet, Bone, Activity, Wifi, Mic, Volume2, 
   Plus, Check, X, Shield, PawPrint, Battery,
-  ChevronRight, ChevronLeft, TrendingUp, Sparkles, Heart
+  ChevronRight, ChevronLeft, TrendingUp, Sparkles, Heart,
+  MessageSquare, Send
 } from 'lucide-react';
 import './index.css';
 
@@ -151,6 +152,12 @@ export default function App() {
         <NavItem icon={<Bell />} label="Alertas" isActive={activeTab === 'alerts'} onClick={() => setActiveTab('alerts')} badge={pendingAlertsCount} />
         <NavItem icon={<Settings />} label="Config" isActive={activeTab === 'config'} onClick={() => setActiveTab('config')} />
       </nav>
+      {/* Floating AI Chatbot */}
+      <AiChatbotWidget 
+        todayFoodIntake={todayFoodIntake}
+        todayWaterIntake={todayWaterIntake}
+        eatingSpeed={eatingSpeed}
+      />
     </div>
   );
 }
@@ -514,6 +521,55 @@ function StatisticsScreen({
   eatingSpeed, todayFeedingLogs, onClose 
 }) {
   const [activeSubTab, setActiveSubTab] = useState('diario');
+  const [aiRecs, setAiRecs] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+
+  useEffect(() => {
+    if (activeSubTab === 'salud' && !aiRecs) {
+      setLoadingAi(true);
+      fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{
+                text: `Genera exactamente 3 recomendaciones médicas de salud cortas y útiles de 1 línea cada una, con base en estos datos reales de un perro Golden Retriever de 25 kg llamado Max hoy:
+- Comida consumida hoy: ${todayFoodIntake}g (meta 240g)
+- Agua consumida hoy: ${todayWaterIntake}ml (meta 600ml)
+- Velocidad de ingesta: ${eatingSpeed} g/s (rango óptimo: 1.5 - 2.5 g/s)
+
+Devuelve una lista separada por saltos de línea con los 3 consejos (sin títulos, sin marcas de negrita, sin números, solo el texto del consejo directamente). Comienza cada uno con un emoji correspondiente (por ejemplo, ⏱️, 💧, 🍖).`
+              }]
+            }
+          ]
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        try {
+          const text = data.candidates[0].content.parts[0].text;
+          const recsList = text.split('\n').filter(l => l.trim().length > 0).slice(0, 3);
+          setAiRecs(recsList);
+        } catch (e) {
+          setAiRecs([
+            "⏱️ Ritmo de alimentación óptimo registrado en la balanza HX711.",
+            "💧 Max mantiene un consumo de agua excelente de acuerdo a su peso corporal.",
+            "🍖 El balance calórico diario es correcto para su nivel de actividad física."
+          ]);
+        }
+        setLoadingAi(false);
+      })
+      .catch(() => {
+        setAiRecs([
+          "⏱️ Ritmo de alimentación óptimo registrado en la balanza HX711.",
+          "💧 Max mantiene un consumo de agua excelente de acuerdo a su peso corporal.",
+          "🍖 El balance calórico diario es correcto para su nivel de actividad física."
+        ]);
+        setLoadingAi(false);
+      });
+    }
+  }, [activeSubTab]);
 
   const foodPercent = Math.min(1.0, todayFoodIntake / dailyFoodTarget);
   const waterPercent = Math.min(1.0, todayWaterIntake / dailyWaterTarget);
@@ -872,19 +928,21 @@ function StatisticsScreen({
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
               <Sparkles size={14} color="var(--primary)" />
-              <h3 style={{ fontSize: '0.85rem', fontWeight: 'bold', margin: 0 }}>Recomendaciones de Salud de PetLink</h3>
+              <h3 style={{ fontSize: '0.85rem', fontWeight: 'bold', margin: 0 }}>Recomendaciones de Salud por Gemini IA</h3>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.68rem', lineHeight: 1.35, color: 'var(--text-secondary)' }}>
-              <div>
-                <strong style={{ color: 'var(--text-primary)' }}>✓ Estabilidad de Peso:</strong> El sensor HX711 reporta estabilidad alimentaria perfecta sin anomalías (Max come la totalidad de sus porciones sin dejar sobras). Esto indica un apetito sano.
+            {loadingAi ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ height: '12px', backgroundColor: 'var(--border-color)', borderRadius: '4px', animation: 'pulse 1.5s infinite' }}></div>
+                <div style={{ height: '12px', backgroundColor: 'var(--border-color)', borderRadius: '4px', animation: 'pulse 1.5s infinite', width: '80%' }}></div>
+                <div style={{ height: '12px', backgroundColor: 'var(--border-color)', borderRadius: '4px', animation: 'pulse 1.5s infinite', width: '90%' }}></div>
               </div>
-              <div>
-                <strong style={{ color: 'var(--text-primary)' }}>💧 Consumo de Agua:</strong> {mlPerKg < 35.0 ? 'Max ha bebido un poco menos del ideal hoy. Se recomienda un ciclo de agua adicional de 150ml.' : 'La relación peso/agua es óptima. Max mantiene hidratados los riñones. ¡Excelente trabajo!'}
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.68rem', lineHeight: 1.35, color: 'var(--text-secondary)' }}>
+                {aiRecs && aiRecs.map((rec, idx) => (
+                  <div key={idx}>{rec}</div>
+                ))}
               </div>
-              <div>
-                <strong style={{ color: 'var(--text-primary)' }}>⏱️ Prevención de Obesidad:</strong> Según los 6 meses de datos históricos, Max mantiene una curva calórica lineal y perfecta de 900 kcal/día. Continúa con los horarios preestablecidos.
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -892,5 +950,177 @@ function StatisticsScreen({
   );
 }
 
-// Keep the rest of the file...
+// --- NEW COMPONENT: AI CHATBOT WIDGET ---
+function AiChatbotWidget({ todayFoodIntake, todayWaterIntake, eatingSpeed }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: 'model', text: '¡Hola! Soy PetLink AI, tu asistente veterinario inteligente. ¿Cómo puedo ayudarte hoy con el cuidado, la alimentación, el agua o la salud de Max?' }
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || isTyping) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    setMessages(prev => [...prev, { role: 'user', text: userMessage }]);
+    setIsTyping(true);
+
+    try {
+      const chatHistoryPrompt = messages.map(m => `${m.role === 'user' ? 'Dueño' : 'PetLink AI'}: ${m.text}`).join('\n');
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{
+                text: `Eres PetLink AI, un veterinario experto y asistente de cuidado de mascotas. Max es un perro Golden Retriever de 3 años, sano y activo (peso 25.0 kg). Sus datos de hoy de los sensores IoT son:
+- Comida consumida hoy: ${todayFoodIntake}g
+- Agua consumida hoy: ${todayWaterIntake}ml
+- Velocidad de ingesta: ${eatingSpeed} g/s
+
+Responde preguntas de forma amigable, empática, profesional y muy concisa (máximo 2-3 oraciones). Da consejos útiles de adiestramiento o salud.
+Historial del chat:
+${chatHistoryPrompt}
+Dueño: ${userMessage}
+PetLink AI:`
+              }]
+            }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const botText = data.candidates[0].content.parts[0].text;
+      setMessages(prev => [...prev, { role: 'model', text: botText }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'model', text: 'Lo siento, no he podido conectarme a la nube de Gemini. Por favor verifica tu API Key.' }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', bottom: '80px', right: '20px', zIndex: 1000, fontFamily: 'inherit' }}>
+      {/* Floating Button */}
+      {!isOpen && (
+        <button 
+          onClick={() => setIsOpen(true)}
+          style={{
+            width: '60px', height: '60px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--primary) 0%, #E67E22 100%)',
+            border: 'none', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center',
+            boxShadow: '0 4px 16px rgba(243, 156, 18, 0.4)', cursor: 'pointer',
+            transition: 'transform 0.2s ease',
+          }}
+          className="hover-scale"
+        >
+          <MessageSquare size={28} />
+        </button>
+      )}
+
+      {/* Chat Window */}
+      {isOpen && (
+        <div style={{
+          width: '320px', height: '420px', borderRadius: '20px',
+          backgroundColor: 'var(--card-bg, #ffffff)', border: '1px solid var(--border-color)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column',
+          overflow: 'hidden', animation: 'fadeIn 0.2s ease'
+        }} className="card animate-fade-in">
+          {/* Header */}
+          <div style={{
+            background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 100%)',
+            padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            color: 'white'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ position: 'relative' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <Sparkles size={16} color="var(--primary)" />
+                </div>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)', position: 'absolute', bottom: 0, right: 0, border: '1.5px solid #2C3E50' }}></div>
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 'bold', color: 'white' }}>PetLink AI</h4>
+                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold' }}>Veterinario Virtual</span>
+              </div>
+            </div>
+            <button 
+              onClick={() => setIsOpen(false)}
+              style={{ background: 'none', border: 'none', color: 'white', opacity: 0.8, cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div style={{
+            flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px',
+            backgroundColor: 'var(--bg-color, #f8fafc)'
+          }}>
+            {messages.map((m, idx) => (
+              <div 
+                key={idx} 
+                style={{
+                  alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%',
+                  padding: '10px 14px',
+                  borderRadius: m.role === 'user' ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
+                  backgroundColor: m.role === 'user' ? 'var(--primary)' : 'var(--card-bg, #ffffff)',
+                  color: m.role === 'user' ? 'white' : 'var(--text-primary)',
+                  fontSize: '0.75rem',
+                  lineHeight: 1.35,
+                  boxShadow: m.role === 'user' ? 'none' : '0 2px 8px rgba(0,0,0,0.04)',
+                  border: m.role === 'user' ? 'none' : '1px solid var(--border-color)'
+                }}
+              >
+                {m.text}
+              </div>
+            ))}
+            {isTyping && (
+              <div style={{
+                alignSelf: 'flex-start', padding: '8px 12px', borderRadius: '12px',
+                backgroundColor: 'var(--card-bg, #ffffff)', border: '1px solid var(--border-color)',
+                fontSize: '0.7rem', color: 'var(--text-secondary)'
+              }}>
+                PetLink AI está escribiendo...
+              </div>
+            )}
+          </div>
+
+          {/* Input Form */}
+          <form onSubmit={handleSend} style={{
+            padding: '10px 16px', display: 'flex', gap: '8px', borderTop: '1px solid var(--border-color)',
+            backgroundColor: 'var(--card-bg, #ffffff)'
+          }}>
+            <input 
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Pregúntame sobre Max..."
+              style={{
+                flex: 1, padding: '8px 12px', borderRadius: '20px', border: '1px solid var(--border-color)',
+                fontSize: '0.75rem', outline: 'none', backgroundColor: 'var(--bg-color)'
+              }}
+            />
+            <button 
+              type="submit"
+              style={{
+                width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary)',
+                border: 'none', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <Send size={14} />
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
 

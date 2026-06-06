@@ -27,26 +27,42 @@ class PetLinkApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = Provider.of<AppState>(context);
     
-    // Define Theme colors
-    const primaryColor = Color(0xFFF39C12);
+    // Fintech Palette from promt.md
+    const primaryLight = Color(0xFF00B894); // Light Teal
+    const secondaryLight = Color(0xFF4338CA); // Light Indigo
     const bgLight = Color(0xFFF8FAFC);
-    const bgDark = Color(0xFF0F172A);
+    const cardLight = Colors.white;
+
+    const primaryDark = Color(0xFF00D4AA); // Dark Teal
+    const secondaryDark = Color(0xFF4F46E5); // Dark Indigo
+    const bgDark = Color(0xFF0A0F1E);
+    const cardDark = Color(0xFF111827);
 
     final lightTheme = ThemeData(
       brightness: Brightness.light,
-      primaryColor: primaryColor,
+      primaryColor: primaryLight,
       scaffoldBackgroundColor: bgLight,
-      textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
-      colorScheme: const ColorScheme.light(primary: primaryColor, secondary: primaryColor),
+      cardColor: cardLight,
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.light().textTheme),
+      colorScheme: const ColorScheme.light(
+        primary: primaryLight,
+        secondary: secondaryLight,
+        surface: cardLight,
+      ),
       useMaterial3: true,
     );
 
     final darkTheme = ThemeData(
       brightness: Brightness.dark,
-      primaryColor: primaryColor,
+      primaryColor: primaryDark,
       scaffoldBackgroundColor: bgDark,
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
-      colorScheme: const ColorScheme.dark(primary: primaryColor, secondary: primaryColor),
+      cardColor: cardDark,
+      textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
+      colorScheme: const ColorScheme.dark(
+        primary: primaryDark,
+        secondary: secondaryDark,
+        surface: cardDark,
+      ),
       useMaterial3: true,
     );
 
@@ -120,7 +136,7 @@ class _MainScreenState extends State<MainScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.grey.withOpacity(0.3), width: 2),
                   image: const DecorationImage(
-                    image: NetworkImage('https://api.dicebear.com/7.x/notionists/png?seed=Max&backgroundColor=F39C12'),
+                    image: NetworkImage('https://api.dicebear.com/7.x/notionists/png?seed=Max&backgroundColor=00D4AA'),
                   ),
                 ),
               ),

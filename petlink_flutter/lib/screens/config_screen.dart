@@ -3,15 +3,30 @@ import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../state/app_state.dart';
 
-class ConfigScreen extends StatelessWidget {
+class ConfigScreen extends StatefulWidget {
   const ConfigScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ConfigScreen> createState() => _ConfigScreenState();
+}
+
+class _ConfigScreenState extends State<ConfigScreen> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = Provider.of<AppState>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardColor = theme.cardColor;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -37,7 +52,7 @@ class ConfigScreen extends StatelessWidget {
                     color: Colors.grey[200],
                     shape: BoxShape.circle,
                     image: const DecorationImage(
-                      image: NetworkImage('https://api.dicebear.com/7.x/notionists/png?seed=Max&backgroundColor=F39C12'),
+                      image: NetworkImage('https://api.dicebear.com/7.x/notionists/png?seed=Max&backgroundColor=00D4AA'),
                     ),
                   ),
                 ),
@@ -103,36 +118,7 @@ class ConfigScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 16),
 
-          // Conexión Sistema
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    Icon(LucideIcons.wifi, size: 18),
-                    SizedBox(width: 8),
-                    Text('Conexión Sistema', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildInfoField('Broker MQTT', 'mqtt://broker.hivemq.com:1883', isDark),
-                const SizedBox(height: 12),
-                _buildInfoField('Dispositivo ID', 'ESP8266_UTEC_2026', isDark),
-              ],
-            ),
-          ),
-          
           const SizedBox(height: 20),
           Center(
             child: Text(
@@ -162,22 +148,4 @@ class ConfigScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoField(String label, String value, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey[600])),
-        const SizedBox(height: 4),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0F172A) : Colors.grey[100],
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(value, style: const TextStyle(fontSize: 14)),
-        ),
-      ],
-    );
-  }
 }

@@ -42,27 +42,7 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
     });
   }
 
-  String _getApiKey() {
-    // 1. Try compile-time environment variable (e.g. from --dart-define or --dart-define-from-file)
-    const compileTimeKey = String.fromEnvironment('VITE_GEMINI_API_KEY');
-    if (compileTimeKey.isNotEmpty) {
-      return compileTimeKey;
-    }
 
-    // 2. Fallback to local file reading for dev environments
-    try {
-      final file = File('../.env');
-      if (file.existsSync()) {
-        final lines = file.readAsLinesSync();
-        for (var line in lines) {
-          if (line.startsWith('VITE_GEMINI_API_KEY=')) {
-            return line.replaceFirst('VITE_GEMINI_API_KEY=', '').trim();
-          }
-        }
-      }
-    } catch (_) {}
-    return '';
-  }
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
@@ -116,12 +96,12 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
         });
       }
 
-      final apiKey = _getApiKey();
+      final apiKey = state.activeApiKey;
       if (apiKey.isEmpty) {
         setState(() {
           _messages.add({
             'role': 'model',
-            'text': 'Configuración de API Key no encontrada. Por favor revisa tu archivo .env.'
+            'text': 'Configuración de API Key no encontrada. Por favor revisa la pantalla de configuración en la app o tu archivo .env.'
           });
           _isLoading = false;
         });
@@ -130,12 +110,12 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
       }
 
       final client = HttpClient();
-      final uri = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey');
+      final uri = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
       final request = await client.postUrl(uri);
       request.headers.set('content-type', 'application/json');
 
       final body = {'contents': contents};
-      request.write(json.encode(body));
+      request.add(utf8.encode(json.encode(body)));
 
       final response = await request.close();
       if (response.statusCode == 200) {
@@ -147,10 +127,24 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
           _messages.add({'role': 'model', 'text': replyText.trim()});
         });
       } else {
+        final responseBody = await response.transform(utf8.decoder).join();
+        String errorMsg = '';
+        try {
+          final data = json.decode(responseBody);
+          errorMsg = data['error']['message'] ?? '';
+        } catch (_) {}
+
+        String replyText = 'Error en el servidor de Gemini (${response.statusCode}). ';
+        if (errorMsg.contains('API key') || errorMsg.contains('restricted') || errorMsg.contains('invalid') || errorMsg.contains('not found')) {
+          replyText += 'Asegúrate de que tu API Key sea correcta y de que no tenga restricciones activas (Key Restrictions) bloqueando la Generative Language API en Google Cloud Console.';
+        } else {
+          replyText += 'Verifica tu configuración o intenta de nuevo.';
+        }
+
         setState(() {
           _messages.add({
             'role': 'model',
-            'text': 'Lo siento, tuve un problema al conectar con mis sensores neuronales. ¿Podrías intentar de nuevo?'
+            'text': replyText
           });
         });
       }
@@ -158,7 +152,7 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
       setState(() {
         _messages.add({
           'role': 'model',
-          'text': 'Hubo un error de red al intentar comunicarme con la IA. Asegúrate de estar conectado a internet.'
+          'text': 'Hubo un error de red al intentar comunicarme con la IA. Asegúrate de estar conectado a internet. Detalles: $e'
         });
       });
     } finally {
@@ -173,20 +167,26 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final primaryColor = const Color(0xFFF39C12);
+    final primaryColor = theme.primaryColor;
     final chatBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
     final headerBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: chatBg,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    double sheetHeight = MediaQuery.of(context).size.height * 0.75 - keyboardHeight;
+    if (sheetHeight < 250.0) sheetHeight = 250.0;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardHeight),
+      child: Container(
+        height: sheetHeight,
+        decoration: BoxDecoration(
+          color: chatBg,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
         ),
-      ),
-      child: Column(
+        child: Column(
         children: [
           // Header Bar
           Container(
@@ -338,8 +338,9 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMessageBubble({
     required String text,
@@ -427,7 +428,7 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1.5),
                     image: const DecorationImage(
-                      image: NetworkImage('https://api.dicebear.com/7.x/notionists/png?seed=Max&backgroundColor=F39C12'),
+                      image: NetworkImage('https://api.dicebear.com/7.x/notionists/png?seed=Max&backgroundColor=00D4AA'),
                     ),
                   ),
                 ),
@@ -440,6 +441,7 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
   }
 
   Widget _buildLoadingBubble(bool isDark) {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -450,11 +452,11 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
             height: 28,
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF39C12).withOpacity(0.12),
+              color: theme.primaryColor.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
-            child: const Center(
-              child: Icon(LucideIcons.sparkles, color: Color(0xFFF39C12), size: 14),
+            child: Center(
+              child: Icon(LucideIcons.sparkles, color: theme.primaryColor, size: 14),
             ),
           ),
           Container(
@@ -470,12 +472,12 @@ class _AIChatbotSheetState extends State<AIChatbotSheet> {
             ),
             child: Row(
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 12,
                   height: 12,
                   child: CircularProgressIndicator(
                     strokeWidth: 1.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF39C12)),
+                    valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
                   ),
                 ),
                 const SizedBox(width: 10),

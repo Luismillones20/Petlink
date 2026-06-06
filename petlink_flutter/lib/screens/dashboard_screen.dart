@@ -14,9 +14,9 @@ class DashboardScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final primaryGradient = const LinearGradient(
-      colors: [Color(0xFFF39C12), Color(0xFFE67E22)],
+    final cardColor = isDark ? const Color(0xFF111827) : Colors.white;
+    final primaryGradient = LinearGradient(
+      colors: [theme.primaryColor, theme.colorScheme.secondary],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -30,7 +30,10 @@ class DashboardScreen extends StatelessWidget {
     // Determine weight status text and color
     String weightStatus = 'Estable';
     Color weightStatusColor = Colors.green;
-    if (state.foodWeight <= 20) {
+    if (state.foodWeight < 0) {
+      weightStatus = 'Falla de Balanza';
+      weightStatusColor = Colors.red;
+    } else if (state.foodWeight <= 20) {
       weightStatus = 'Vacío';
       weightStatusColor = Colors.red;
     } else if (state.foodWeight <= 80) {
@@ -47,6 +50,35 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 0. Offline Connection Status Banner
+          if (!state.isConnected) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.withOpacity(0.4), width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.wifiOff, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Sin conexión con el dispensador. Verifique la alimentación de los módulos y el broker.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: isDark ? Colors.redAccent : Colors.red[900],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // 1. Dynamic Notification Approval Banner (Top Level)
           if (pendingFoodRequest != null) ...[
             _buildInteractiveApprovalBanner(context, pendingFoodRequest, state),
@@ -132,15 +164,15 @@ class DashboardScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
+                        color: (state.isConnected ? theme.primaryColor : Colors.red).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'En Línea',
+                        state.isConnected ? 'En Línea' : 'Desconectado',
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: theme.primaryColor,
+                          color: state.isConnected ? theme.primaryColor : Colors.red,
                         ),
                       ),
                     ),
@@ -150,14 +182,26 @@ class DashboardScreen extends StatelessWidget {
                 SizedBox(
                   height: 140,
                   width: double.infinity,
-                  child: CustomPaint(
-                    painter: WeightChartPainter(
-                      data: state.weightHistory,
-                      lineColor: theme.primaryColor,
-                      areaColor: theme.primaryColor,
-                      isDark: isDark,
-                    ),
-                  ),
+                  child: state.weightHistory.isEmpty
+                      ? Center(
+                          child: Text(
+                            state.isConnected 
+                                ? 'Esperando lecturas de peso...' 
+                                : 'Sin conexión con el dispensador',
+                            style: TextStyle(
+                              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                              fontSize: 12,
+                            ),
+                          ),
+                        )
+                      : CustomPaint(
+                          painter: WeightChartPainter(
+                            data: state.weightHistory,
+                            lineColor: theme.primaryColor,
+                            areaColor: theme.primaryColor,
+                            isDark: isDark,
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -232,7 +276,7 @@ class DashboardScreen extends StatelessWidget {
                     ],
                   ),
                   child: ElevatedButton.icon(
-                    onPressed: state.activeSolenoids > 0 ? null : state.manualFeed,
+                    onPressed: (!state.isConnected || state.activeSolenoids > 0) ? null : state.manualFeed,
                     icon: const Icon(LucideIcons.bone, size: 20, color: Colors.white),
                     label: const Text(
                       'Alimentar',
@@ -266,7 +310,7 @@ class DashboardScreen extends StatelessWidget {
                     ],
                   ),
                   child: ElevatedButton.icon(
-                    onPressed: state.activeSolenoids > 0 ? null : state.manualWater,
+                    onPressed: (!state.isConnected || state.activeSolenoids > 0) ? null : state.manualWater,
                     icon: const Icon(LucideIcons.droplets, size: 20, color: Colors.white),
                     label: const Text(
                       'Agua (150ml)',
@@ -285,8 +329,6 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // 7. Expandable Hardware Simulator (For Testing Pet Button)
-          _buildHardwareSimulatorPanel(context, theme, state, cardColor, isDark),
         ],
       ),
     );
@@ -303,12 +345,12 @@ class DashboardScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2C1E12) : const Color(0xFFFDF6EC),
+        color: isDark ? const Color(0xFF1E1E2F) : const Color(0xFFEEF2FF),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF39C12).withOpacity(0.5), width: 1.5),
+        border: Border.all(color: Theme.of(context).colorScheme.secondary.withOpacity(0.5), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF39C12).withOpacity(0.15),
+            color: Theme.of(context).colorScheme.secondary.withOpacity(0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -322,10 +364,10 @@ class DashboardScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF39C12).withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(LucideIcons.bell, color: Color(0xFFE67E22), size: 20),
+                child: Icon(LucideIcons.bell, color: Theme.of(context).colorScheme.secondary, size: 20),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -337,7 +379,7 @@ class DashboardScreen extends StatelessWidget {
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 13,
-                        color: Color(0xFFE67E22),
+                        color: Color(0xFF00D4AA),
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -467,8 +509,12 @@ class DashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${weight.round()}g',
-            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+            weight < 0 ? 'ERROR' : '${weight.round()}g',
+            style: TextStyle(
+              fontSize: 26, 
+              fontWeight: FontWeight.w900,
+              color: weight < 0 ? Colors.red : null,
+            ),
           ),
           const SizedBox(height: 8),
           Container(
@@ -552,80 +598,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  // Expandable panel to mock physical hardware buttons
-  Widget _buildHardwareSimulatorPanel(
-    BuildContext context,
-    ThemeData theme,
-    AppState state,
-    Color cardColor,
-    bool isDark,
-  ) {
-    return Card(
-      elevation: 0,
-      color: isDark ? const Color(0xFF1E293B) : Colors.grey[100],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: ExpansionTile(
-        title: const Text(
-          'Simulador de Dispositivo (Hardware)',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueGrey),
-        ),
-        leading: const Icon(LucideIcons.cpu, color: Colors.blueGrey),
-        childrenPadding: const EdgeInsets.all(16),
-        expandedAlignment: Alignment.topLeft,
-        children: [
-          const Text(
-            'Simula interacciones físicas que ocurrirían en el circuito Arduino Mega o ESP32-CAM:',
-            style: TextStyle(fontSize: 11, height: 1.4),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () {
-              state.triggerPetButtonRequest();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Simulación: ¡Mascota presionó el botón físico!'),
-                  backgroundColor: Color(0xFFF39C12),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-            icon: const Icon(LucideIcons.bell, size: 18, color: Colors.white),
-            label: const Text('Simular Botón Físico de Mascota', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE67E22),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Network logs mock
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF0F172A) : Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Consola de Depuración IoT:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                const SizedBox(height: 6),
-                Text('[Arduino Mega] Sensor HX711 calibrado. Peso inicial: ${state.foodWeight.round()}g', style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.green)),
-                const SizedBox(height: 2),
-                Text('[ESP32-CAM] Video stream listo en http://${state.esp32CamIP}/stream', style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.blue)),
-                const SizedBox(height: 2),
-                Text('[MQTT] Publicando en tema: petlink/dispenser/status', style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.purple)),
-                const SizedBox(height: 2),
-                Text('[Red] RSSI: ${state.wifiSignal} dBm (Señal Fuerte)', style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Colors.grey)),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
+  // El simulador de hardware ha sido removido en la versión final.
 
   // Premium Health Analytics Banner
   Widget _buildHealthStatsBanner(BuildContext context, Color cardColor, bool isDark) {
@@ -640,8 +613,8 @@ class DashboardScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2C3E50), Color(0xFF34495E)],
+          gradient: LinearGradient(
+            colors: [Theme.of(context).colorScheme.secondary, Theme.of(context).primaryColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -662,7 +635,7 @@ class DashboardScreen extends StatelessWidget {
                 color: Colors.white.withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(LucideIcons.sparkles, color: Color(0xFFF39C12), size: 20),
+              child: Icon(LucideIcons.sparkles, color: Theme.of(context).primaryColor, size: 20),
             ),
             const SizedBox(width: 14),
             const Expanded(

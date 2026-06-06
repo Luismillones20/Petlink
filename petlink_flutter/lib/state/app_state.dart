@@ -1,18 +1,22 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:mqtt_client/mqtt_client.dart';
+import 'package:mqtt_client/mqtt_server_client.dart';
 import '../models/alert.dart';
 import '../models/schedule.dart';
 
 class AppState extends ChangeNotifier {
+  // MQTT Client
+  MqttServerClient? _mqttClient;
+
   // Sensor Data (Arduino Mega & Load Cell)
-  double foodLevel = 65.0; // %
-  double waterLevel = 40.0; // %
-  double foodWeight = 120.0; // g (Weight Sensor reading)
-  String lastFed = 'Hoy, 08:30 AM';
-  bool isConnected = true;
+  double foodLevel = -1.0; // % (-1 means no data / error)
+  double waterLevel = -1.0; // %
+  double foodWeight = -1.0; // g
+  String lastFed = 'Sin registros';
+  bool isConnected = false;
   bool isDarkMode = false;
 
   // --- HEALTH & STATS ENGINE VARIABLES ---
@@ -23,8 +27,8 @@ class AppState extends ChangeNotifier {
   double dailyFoodTarget = 240.0; // g
 
   // Real-time calculated properties for today
-  double get todayFoodIntake => foodConsumptionHistory.last;
-  double get todayWaterIntake => waterConsumptionHistory.last;
+  double get todayFoodIntake => foodConsumptionHistory.isEmpty ? 0.0 : foodConsumptionHistory.last;
+  double get todayWaterIntake => waterConsumptionHistory.isEmpty ? 0.0 : waterConsumptionHistory.last;
   double get todayCalorieIntake => todayFoodIntake * 3.75; // 1g of dry food = ~3.75 kcal
 
   // Monthly History (Last 6 months)
@@ -45,6 +49,20 @@ class AppState extends ChangeNotifier {
   ];
   bool loadingAiRecommendations = false;
 
+  String customApiKey = '';
+
+  String get activeApiKey {
+    if (customApiKey.trim().isNotEmpty) {
+      return customApiKey.trim();
+    }
+    return _getApiKey();
+  }
+
+  void updateApiKey(String key) {
+    customApiKey = key;
+    notifyListeners();
+  }
+
   String _getApiKey() {
     // 1. Try compile-time environment variable (e.g. from --dart-define or --dart-define-from-file)
     const compileTimeKey = String.fromEnvironment('VITE_GEMINI_API_KEY');
@@ -64,6 +82,8 @@ class AppState extends ChangeNotifier {
         }
       }
     } catch (_) {}
+
+    // 3. Hardcoded fallback key for APK installations
     return '';
   }
 
@@ -72,11 +92,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final apiKey = _getApiKey();
+      final apiKey = activeApiKey;
       if (apiKey.isEmpty) return;
       
       final client = HttpClient();
-      final uri = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey');
+      final uri = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey');
       final request = await client.postUrl(uri);
       request.headers.set('content-type', 'application/json');
       
@@ -96,7 +116,7 @@ class AppState extends ChangeNotifier {
         ]
       };
       
-      request.write(json.encode(body));
+      request.add(utf8.encode(json.encode(body)));
       final response = await request.close();
       
       if (response.statusCode == 200) {
@@ -117,38 +137,31 @@ class AppState extends ChangeNotifier {
   }
 
   // Connection Info (IoT Broker & Devices)
-  String brokerUrl = 'mqtt://broker.hivemq.com:1883';
-  String deviceId = 'ESP8266_UTEC_2026';
+  String brokerUrl = 'mqtt://18.225.238.184:1883';
+  String deviceId = 'esp8266_dispensador_01';
   String arduinoIP = '192.168.1.150';
   String esp32CamIP = '192.168.1.151';
-  int wifiSignal = -56; // dBm (RSSI)
-  int activeSolenoids = 0; // Simulated pin controls on Arduino Mega
+  int wifiSignal = 0; // dBm (RSSI)
+  int activeSolenoids = 0; // Actual pin controls on Arduino Mega
   
   // Real-time analytics / Weight history
-  List<double> weightHistory = [120.0, 110.0, 95.0, 70.0, 50.0, 130.0, 120.0, 112.0, 105.0, 120.0];
-  List<double> foodConsumptionHistory = [75.0, 85.0, 60.0, 90.0, 80.0, 95.0, 80.0]; // Last 7 days in grams
-  List<double> waterConsumptionHistory = [250.0, 300.0, 280.0, 310.0, 290.0, 350.0, 270.0]; // Last 7 days in mL
+  List<double> weightHistory = [];
+  List<double> foodConsumptionHistory = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; // Last 7 days in grams
+  List<double> waterConsumptionHistory = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]; // Last 7 days in mL
   // AI & ESP32-CAM Configurations
   bool isAIEnabled = true;
   double aiConfidenceThreshold = 85.0; // %
   bool aiOnlyFeeding = false; 
   bool boundingBoxOverlay = true;
-  String aiStatus = 'Max detectado'; // Current video scanner target
-  double currentConfidence = 96.0;
+  String aiStatus = 'Buscando mascota...'; // Current video scanner target
+  double currentConfidence = 0.0;
   bool infraredLight = false;
 
   // AI Snapshots Gallery (ESP32-CAM triggered)
-  List<Map<String, String>> aiSnapshots = [
-    {'time': '08:30 AM', 'label': 'Max (Identificado)', 'confidence': '98%', 'status': 'Alimentado'},
-    {'time': '10:12 AM', 'label': 'Desconocido', 'confidence': '42%', 'status': 'Alerta emitida'},
-    {'time': '10:45 AM', 'label': 'Max (Identificado)', 'confidence': '96%', 'status': 'Petición botón'},
-  ];
+  List<Map<String, String>> aiSnapshots = [];
 
   // Alerts
-  List<AlertModel> alerts = [
-    AlertModel(id: 1, type: 'food_req', msg: 'Mascota pidió comida (Botón Físico)', time: '10:45 AM', status: 'pending'),
-    AlertModel(id: 2, type: 'bark', msg: 'Ladrido detectado (MAX9814)', time: '10:12 AM', status: 'info'),
-  ];
+  List<AlertModel> alerts = [];
 
   // Schedules (Synchronized with Arduino EEPROM via MQTT)
   List<ScheduleModel> schedules = [
@@ -157,88 +170,251 @@ class AppState extends ChangeNotifier {
     ScheduleModel(id: 3, type: 'food', time: '18:30 PM', amount: '80g', portionGrams: 80, active: false, validateWithAI: true),
   ];
 
-  Timer? _simulationTimer;
-
   AppState() {
-    _startSimulation();
+    _initMqtt();
   }
 
   @override
   void dispose() {
-    _simulationTimer?.cancel();
+    _mqttClient?.disconnect();
     super.dispose();
   }
 
-  // MQTT / Sensor simulation
-  void _startSimulation() {
-    _simulationTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (!isConnected) return;
-      
-      final random = Random();
-      
-      // Pet slowly consumes food and water
-      if (random.nextDouble() > 0.7) {
-        waterLevel = max(0.0, waterLevel - 0.5);
-      }
-      if (random.nextDouble() > 0.8) {
-        // Decrease food weight to simulate eating
-        double oldWeight = foodWeight;
-        foodWeight = max(0.0, foodWeight - random.nextInt(4).toDouble());
-        if (oldWeight != foodWeight) {
-          // Update the last reading in our graph
-          if (weightHistory.isNotEmpty) {
-            weightHistory[weightHistory.length - 1] = foodWeight;
-          }
-        }
-      }
+  Future<void> _initMqtt() async {
+    // Extract host and port from brokerUrl
+    String host = brokerUrl;
+    if (host.startsWith('mqtt://')) {
+      host = host.replaceFirst('mqtt://', '');
+    }
+    int port = 1883;
+    if (host.contains(':')) {
+      final parts = host.split(':');
+      host = parts[0];
+      port = int.tryParse(parts[1]) ?? 1883;
+    }
 
-      // Fluctuations in Wi-Fi and stats
-      wifiSignal = -50 - random.nextInt(15);
+    final String clientId = 'petlink_flutter_app_${DateTime.now().millisecondsSinceEpoch % 10000}';
+    _mqttClient = MqttServerClient(host, clientId);
+    _mqttClient!.port = port;
+    _mqttClient!.keepAlivePeriod = 20;
+    _mqttClient!.onDisconnected = _onMqttDisconnected;
+    _mqttClient!.onConnected = _onMqttConnected;
+    _mqttClient!.onSubscribed = _onMqttSubscribed;
+    
+    final connMessage = MqttConnectMessage()
+        .withClientIdentifier(clientId)
+        .startClean()
+        ..withWillQos(MqttQos.atMostOnce);
+    _mqttClient!.connectionMessage = connMessage;
 
-      // Random spontaneous events (ladridos o detección de IA)
-      if (random.nextDouble() > 0.985) {
-        final isBark = random.nextBool();
-        final now = DateTime.now();
-        final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-        
-        if (isBark) {
-          final newAlert = AlertModel(
-            id: DateTime.now().millisecondsSinceEpoch,
-            type: 'bark',
-            msg: 'Ladrido detectado (MAX9814)',
-            time: timeStr,
-            status: 'info',
-          );
-          alerts.insert(0, newAlert);
+    try {
+      print('Connecting to MQTT broker $host:$port ...');
+      await _mqttClient!.connect();
+    } catch (e) {
+      print('MQTT connection failed: $e');
+      isConnected = false;
+      notifyListeners();
+      // Retry connection after 5 seconds
+      Timer(const Duration(seconds: 5), _initMqtt);
+    }
+  }
+
+  void _onMqttConnected() {
+    print('MQTT Connected!');
+    isConnected = true;
+    notifyListeners();
+    _subscribeToTopics();
+  }
+
+  void _onMqttDisconnected() {
+    print('MQTT Disconnected!');
+    isConnected = false;
+    notifyListeners();
+    // Retry connection after 5 seconds
+    Timer(const Duration(seconds: 5), _initMqtt);
+  }
+
+  void _onMqttSubscribed(String topic) {
+    print('MQTT Subscribed to: $topic');
+  }
+
+  void _subscribeToTopics() {
+    if (_mqttClient == null || _mqttClient!.connectionStatus!.state != MqttConnectionState.connected) return;
+
+    _mqttClient!.subscribe('mascotas/g4/comida/distancia', MqttQos.atMostOnce);
+    _mqttClient!.subscribe('mascotas/g4/comida/peso', MqttQos.atMostOnce);
+    _mqttClient!.subscribe('mascotas/g4/agua/nivel', MqttQos.atMostOnce);
+    _mqttClient!.subscribe('mascotas/g4/comida/servo', MqttQos.atMostOnce);
+    _mqttClient!.subscribe('mascotas/g4/agua/bomba', MqttQos.atMostOnce);
+    _mqttClient!.subscribe('mascotas/g4/alertas', MqttQos.atMostOnce);
+    _mqttClient!.subscribe('mascotas/g4/botones', MqttQos.atMostOnce);
+    _mqttClient!.subscribe('mascotas/g4/wifi/rssi', MqttQos.atMostOnce);
+
+    _mqttClient!.updates!.listen((List<MqttReceivedMessage<MqttMessage?>>? c) {
+      if (c == null) return;
+      final recMess = c[0].payload as MqttPublishMessage;
+      final payload = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+      final topic = c[0].topic;
+
+      _handleIncomingMqttMessage(topic, payload);
+    });
+  }
+
+  void _handleIncomingMqttMessage(String topic, String payload) {
+    print('MQTT Msg received: [$topic] -> $payload');
+
+    if (topic == 'mascotas/g4/comida/distancia') {
+      final double? val = double.tryParse(payload);
+      if (val != null) {
+        // Convierte la distancia en cm a porcentaje de contenedor de comida.
+        // Asumiendo 18cm como vacío (0%) y 3cm como lleno (100%).
+        if (val <= 0 || val > 30) {
+          foodLevel = -1.0; // Sensor error
         } else {
-          // AI camera motion detection event
-          final intruder = random.nextBool();
-          final label = intruder ? 'Intruso (Desconocido)' : 'Max (Identificado)';
-          final conf = intruder ? (30 + random.nextInt(30)) : (85 + random.nextInt(12));
-          
-          aiStatus = label;
-          currentConfidence = conf.toDouble();
-          
-          aiSnapshots.insert(0, {
-            'time': timeStr,
-            'label': label,
-            'confidence': '$conf%',
-            'status': intruder ? 'Alerta de movimiento' : 'Activo en zona',
-          });
-          
-          if (intruder) {
-            alerts.insert(0, AlertModel(
-              id: DateTime.now().millisecondsSinceEpoch,
-              type: 'ai_alert',
-              msg: 'Presencia sospechosa detectada: $label ($conf%)',
-              time: timeStr,
-              status: 'info',
-            ));
-          }
+          foodLevel = ((18.0 - val) / 15.0 * 100.0).clamp(0.0, 100.0);
         }
         notifyListeners();
       }
-    });
+    } else if (topic == 'mascotas/g4/comida/peso') {
+      final double? val = double.tryParse(payload);
+      if (val != null) {
+        if (val < 0) {
+          foodWeight = -1.0; // Sensor error
+        } else {
+          // Detect actual consumption if the weight drops (only when it drops by > 2g)
+          if (foodWeight > 0 && val < foodWeight) {
+            double difference = foodWeight - val;
+            if (difference > 2.0) {
+              if (foodConsumptionHistory.isEmpty) {
+                foodConsumptionHistory = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+              }
+              foodConsumptionHistory[foodConsumptionHistory.length - 1] += difference;
+              
+              final now = DateTime.now();
+              final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+              todayFeedingLogs.add({
+                'time': timeStr,
+                'amount': difference.round(),
+                'type': 'Consumo'
+              });
+            }
+          }
+          foodWeight = val;
+          weightHistory.add(foodWeight);
+          if (weightHistory.length > 12) weightHistory.removeAt(0);
+        }
+        notifyListeners();
+      }
+    } else if (topic == 'mascotas/g4/agua/nivel') {
+      final double? val = double.tryParse(payload);
+      if (val != null) {
+        if (val < 0) {
+          waterLevel = -1.0; // Sensor error
+        } else {
+          // Detect water consumption (e.g. from level drop in container, 1% ≈ 10ml)
+          if (waterLevel > 0 && val < waterLevel) {
+            double diffPct = waterLevel - val;
+            double mlConsumed = diffPct * 10.0;
+            if (mlConsumed > 0) {
+              if (waterConsumptionHistory.isEmpty) {
+                waterConsumptionHistory = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+              }
+              waterConsumptionHistory[waterConsumptionHistory.length - 1] += mlConsumed;
+            }
+          }
+          waterLevel = val;
+        }
+        notifyListeners();
+      }
+    } else if (topic == 'mascotas/g4/wifi/rssi') {
+      final int? val = int.tryParse(payload);
+      if (val != null) {
+        wifiSignal = val;
+        notifyListeners();
+      }
+    } else if (topic == 'mascotas/g4/comida/servo') {
+      if (payload == 'ABIERTO') {
+        activeSolenoids = 1;
+      } else {
+        activeSolenoids = 0;
+      }
+      notifyListeners();
+    } else if (topic == 'mascotas/g4/agua/bomba') {
+      if (payload == 'ACTIVA') {
+        activeSolenoids = 2;
+      } else {
+        activeSolenoids = 0;
+      }
+      notifyListeners();
+    } else if (topic == 'mascotas/g4/botones') {
+      if (payload == 'COMIDA') {
+        triggerPetButtonRequest();
+      } else if (payload == 'AGUA') {
+        final now = DateTime.now();
+        final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+        final newAlert = AlertModel(
+          id: DateTime.now().millisecondsSinceEpoch,
+          type: 'water_req',
+          msg: 'Mascota pidió agua (Botón Físico)',
+          time: timeStr,
+          status: 'pending',
+        );
+        alerts.insert(0, newAlert);
+        notifyListeners();
+      }
+    } else if (topic == 'mascotas/g4/alertas') {
+      final now = DateTime.now();
+      final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+      if (payload == 'COMIDA_BAJA') {
+        final newAlert = AlertModel(
+          id: DateTime.now().millisecondsSinceEpoch,
+          type: 'food_low',
+          msg: '¡Contenedor de comida bajo! (Sensor de distancia)',
+          time: timeStr,
+          status: 'info',
+        );
+        alerts.insert(0, newAlert);
+        notifyListeners();
+      } else if (payload == 'DISPENSANDO' || payload == 'BOMBA_ON') {
+        activeSolenoids = payload == 'DISPENSANDO' ? 1 : 2;
+        notifyListeners();
+      } else if (payload == 'DISPENSADOR_CERRADO' || payload == 'BOMBA_OFF') {
+        activeSolenoids = 0;
+        notifyListeners();
+      } else {
+        // Alerta genérica
+        final newAlert = AlertModel(
+          id: DateTime.now().millisecondsSinceEpoch,
+          type: 'iot_alert',
+          msg: 'Alerta IoT: $payload',
+          time: timeStr,
+          status: 'info',
+        );
+        alerts.insert(0, newAlert);
+        notifyListeners();
+      }
+    }
+  }
+
+  void _publishMqtt(String topic, String message) {
+    if (_mqttClient == null || _mqttClient!.connectionStatus!.state != MqttConnectionState.connected) {
+      print('Cannot publish, MQTT not connected');
+      return;
+    }
+    final builder = MqttClientPayloadBuilder();
+    builder.addString(message);
+    _mqttClient!.publishMessage(topic, MqttQos.atMostOnce, builder.payload!);
+    print('MQTT Published to [$topic]: $message');
+  }
+
+  void addSchedule(ScheduleModel schedule) {
+    schedules.add(schedule);
+    notifyListeners();
+  }
+
+  void deleteSchedule(int id) {
+    schedules.removeWhere((s) => s.id == id);
+    notifyListeners();
   }
 
   void toggleDarkMode(bool value) {
@@ -311,43 +487,19 @@ class AppState extends ChangeNotifier {
   }
 
   void _dispenseFood(int grams) {
-    activeSolenoids = 1;
+    // Solo enviar el comando por MQTT. La confirmación del servo abierto/cerrado 
+    // y el peso se recibirán mediante telemetría MQTT real.
+    _publishMqtt('mascotas/g4/cmd/comida', 'DISPENSAR');
+    final now = DateTime.now();
+    lastFed = 'Hoy, ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     notifyListeners();
-    
-    // Simulate Arduino Servo opening and closing
-    Timer(const Duration(milliseconds: 1500), () {
-      foodLevel = min(100.0, foodLevel + 8.0);
-      foodWeight = min(300.0, foodWeight + grams);
-      
-      // Update stats
-      final now = DateTime.now();
-      lastFed = 'Hoy, ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      
-      weightHistory.add(foodWeight);
-      if (weightHistory.length > 12) weightHistory.removeAt(0);
-      
-      foodConsumptionHistory[foodConsumptionHistory.length - 1] += grams;
-      
-      // Add to today's hourly logs
-      final nowStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-      todayFeedingLogs.add({'time': nowStr, 'amount': grams, 'type': 'Manual'});
-
-      activeSolenoids = 0;
-      
-      notifyListeners();
-    });
   }
 
   void _dispenseWater(int ml) {
-    activeSolenoids = 2;
+    // Enviar comando para encender bomba por MQTT. 
+    // El apagado se maneja en el Arduino Mega por sensores o tiempo.
+    _publishMqtt('mascotas/g4/cmd/agua', 'ON');
     notifyListeners();
-    
-    Timer(const Duration(milliseconds: 1500), () {
-      waterLevel = min(100.0, waterLevel + 25.0);
-      waterConsumptionHistory[waterConsumptionHistory.length - 1] += ml;
-      activeSolenoids = 0;
-      notifyListeners();
-    });
   }
 
   void resolveAlert(int id, String action) {
@@ -355,9 +507,13 @@ class AppState extends ChangeNotifier {
     if (index != -1) {
       alerts[index].status = action;
       
-      // If action is authorization, command Arduino to dispense!
+      // Si la acción es autorización, manda el comando por MQTT
       if (action == 'resolved') {
-        _dispenseFood(80); // Solicitudes aprobadas sirven 80g
+        if (alerts[index].type == 'water_req') {
+          _dispenseWater(150);
+        } else {
+          _dispenseFood(80); // Solicitudes aprobadas sirven 80g
+        }
         
         if (aiSnapshots.isNotEmpty && aiSnapshots[0]['status'] == 'Petición botón') {
           aiSnapshots[0]['status'] = 'Aprobado y Servido';

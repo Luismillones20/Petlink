@@ -16,7 +16,10 @@ class ProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final barColor = color ?? (value > 50 ? Colors.green : value > 20 ? Colors.orange : Colors.red);
+    final hasError = value < 0;
+    final barColor = hasError 
+        ? Colors.red 
+        : (color ?? (value > 50 ? Colors.green : value > 20 ? Colors.orange : Colors.red));
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
@@ -27,12 +30,15 @@ class ProgressBar extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: iconColor, size: 18),
+                Icon(icon, color: hasError ? Colors.red : iconColor, size: 18),
                 const SizedBox(width: 6),
                 const Text('Nivel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               ],
             ),
-            Text('${value.round()}%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: barColor)),
+            Text(
+              hasError ? 'ERROR SENSOR' : '${value.round()}%', 
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: barColor),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -44,7 +50,7 @@ class ProgressBar extends StatelessWidget {
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: (value / 100).clamp(0.0, 1.0),
+            widthFactor: hasError ? 1.0 : (value / 100).clamp(0.0, 1.0),
             child: Container(
               decoration: BoxDecoration(
                 color: barColor,

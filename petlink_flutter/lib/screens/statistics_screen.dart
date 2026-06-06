@@ -35,7 +35,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    final accentColor = const Color(0xFFF39C12);
+    final accentColor = theme.primaryColor;
     final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
 
     return Scaffold(
@@ -180,8 +180,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                         child: CustomPaint(
                           painter: CircularProgressPainter(
                             percent: caloriePercent,
-                            color: const Color(0xFFF39C12),
-                            trackColor: isDark ? Colors.orange.withOpacity(0.1) : Colors.orange.withOpacity(0.05),
+                            color: theme.colorScheme.secondary,
+                            trackColor: isDark ? theme.colorScheme.secondary.withOpacity(0.1) : theme.colorScheme.secondary.withOpacity(0.05),
                           ),
                           child: Center(
                             child: Column(
@@ -203,10 +203,10 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                       const SizedBox(height: 12),
                       Text(
                         'Comida: ${state.todayFoodIntake.round()}g servidos',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFE67E22),
+                          color: theme.colorScheme.secondary,
                         ),
                       ),
                     ],
@@ -390,12 +390,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: isManual ? Colors.orange.withOpacity(0.12) : Colors.green.withOpacity(0.12),
+                                  color: isManual ? theme.colorScheme.secondary.withOpacity(0.12) : theme.primaryColor.withOpacity(0.12),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
                                   LucideIcons.bone,
-                                  color: isManual ? Colors.orange : Colors.green,
+                                  color: isManual ? theme.colorScheme.secondary : theme.primaryColor,
                                   size: 14,
                                 ),
                               ),
@@ -487,6 +487,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                       waterData: state.monthlyWaterHistory,
                       labels: state.monthLabels,
                       isDark: isDark,
+                      foodColor: theme.primaryColor,
+                      waterColor: theme.colorScheme.secondary,
                     ),
                   ),
                 ),
@@ -498,7 +500,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                     Container(
                       width: 12,
                       height: 12,
-                      decoration: BoxDecoration(color: const Color(0xFFF39C12), borderRadius: BorderRadius.circular(3)),
+                      decoration: BoxDecoration(color: theme.primaryColor, borderRadius: BorderRadius.circular(3)),
                     ),
                     const SizedBox(width: 6),
                     const Text('Comida (kg)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -506,7 +508,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                     Container(
                       width: 12,
                       height: 12,
-                      decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(3)),
+                      decoration: BoxDecoration(color: theme.colorScheme.secondary, borderRadius: BorderRadius.circular(3)),
                     ),
                     const SizedBox(width: 6),
                     const Text('Agua (L)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -560,7 +562,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                 _buildMetricRow(
                   context: context,
                   icon: LucideIcons.badgeAlert,
-                  iconColor: Colors.orange,
+                  iconColor: theme.colorScheme.secondary,
                   label: 'Alertas omitidas',
                   value: '0 este mes',
                   caption: 'Cero ausencias de alimentación registradas',
@@ -580,13 +582,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
     // Calculate water intake per kg
     final mlPerKg = state.todayWaterIntake / state.petWeight;
     String hydrationStatus = 'Insuficiente';
-    Color hydrationColor = Colors.orange;
+    Color hydrationColor = theme.colorScheme.secondary;
     if (mlPerKg >= 45.0) {
       hydrationStatus = 'Excelente';
       hydrationColor = Colors.green;
     } else if (mlPerKg >= 30.0) {
       hydrationStatus = 'Bueno';
-      hydrationColor = Colors.blue;
+      hydrationColor = theme.primaryColor;
     }
 
     return SingleChildScrollView(
@@ -601,13 +603,13 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark 
-                  ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
-                  : [const Color(0xFFF39C12).withOpacity(0.12), Colors.orange.withOpacity(0.04)],
+                  ? [theme.cardColor, theme.scaffoldBackgroundColor]
+                  : [theme.primaryColor.withOpacity(0.12), theme.colorScheme.secondary.withOpacity(0.04)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
+              border: Border.all(color: theme.primaryColor.withOpacity(0.3)),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFF39C12).withOpacity(0.3)),
             ),
             child: Column(
               children: [
@@ -616,7 +618,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                   children: [
                     Row(
                       children: [
-                        Icon(LucideIcons.pawPrint, color: const Color(0xFFF39C12), size: 20),
+                        Icon(LucideIcons.pawPrint, color: theme.primaryColor, size: 20),
                         const SizedBox(width: 8),
                         const Text(
                           'Índice de Salud de Max',
@@ -769,7 +771,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                   children: [
                     Row(
                       children: [
-                        const Icon(LucideIcons.sparkles, color: Color(0xFFF39C12), size: 16),
+                        Icon(LucideIcons.sparkles, color: theme.primaryColor, size: 16),
                         const SizedBox(width: 8),
                         const Text(
                           'Recomendaciones IA PetLink',
@@ -781,7 +783,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                       icon: Icon(
                         LucideIcons.rotateCw,
                         size: 16,
-                        color: state.loadingAiRecommendations ? Colors.orange : Colors.grey,
+                        color: state.loadingAiRecommendations ? theme.primaryColor : Colors.grey,
                       ),
                       onPressed: state.loadingAiRecommendations
                           ? null
@@ -796,12 +798,12 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
                       padding: const EdgeInsets.symmetric(vertical: 24.0),
                       child: Column(
                         children: [
-                          const SizedBox(
+                          SizedBox(
                             width: 24,
                             height: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF39C12)),
+                              valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -849,6 +851,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
   }
 
   Widget _buildAiRecommendationItem(String recommendation) {
+    final theme = Theme.of(context);
     String emoji = "✨";
     String content = recommendation;
     if (recommendation.isNotEmpty) {
@@ -865,7 +868,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> with SingleTickerPr
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFF39C12).withOpacity(0.08),
+            color: theme.primaryColor.withOpacity(0.08),
             shape: BoxShape.circle,
           ),
           child: Text(
@@ -978,12 +981,16 @@ class MonthlyBarChartPainter extends CustomPainter {
   final List<double> waterData;
   final List<String> labels;
   final bool isDark;
+  final Color foodColor;
+  final Color waterColor;
 
   MonthlyBarChartPainter({
     required this.foodData,
     required this.waterData,
     required this.labels,
     required this.isDark,
+    required this.foodColor,
+    required this.waterColor,
   });
 
   @override
@@ -1031,8 +1038,8 @@ class MonthlyBarChartPainter extends CustomPainter {
         foodBarHeight
       );
       final foodPaint = Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFFF39C12), Color(0xFFE67E22)],
+        ..shader = LinearGradient(
+          colors: [foodColor, foodColor.withOpacity(0.7)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ).createShader(foodRect)
@@ -1047,8 +1054,8 @@ class MonthlyBarChartPainter extends CustomPainter {
         waterBarHeight
       );
       final waterPaint = Paint()
-        ..shader = const LinearGradient(
-          colors: [Colors.blue, Color(0xFF3498DB)],
+        ..shader = LinearGradient(
+          colors: [waterColor, waterColor.withOpacity(0.7)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ).createShader(waterRect)

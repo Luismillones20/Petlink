@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../state/app_state.dart';
+import '../services/audio_service.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({Key? key}) : super(key: key);
@@ -15,10 +16,12 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
   bool isTalking = false;
   late AnimationController _scanController;
   late AnimationController _audioController;
+  final AudioService _audioService = AudioService();
 
   @override
   void initState() {
     super.initState();
+    _audioService.conectar();
     _scanController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -34,6 +37,7 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
   void dispose() {
     _scanController.dispose();
     _audioController.dispose();
+    _audioService.desconectar();
     super.dispose();
   }
 
@@ -42,7 +46,7 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
     final state = Provider.of<AppState>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardColor = theme.cardColor;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -213,10 +217,10 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(LucideIcons.shield, color: Color(0xFFF39C12), size: 20),
-                    SizedBox(width: 8),
-                    Text(
+                  children: [
+                    Icon(LucideIcons.shield, color: theme.primaryColor, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
                       'Filtros IA y Seguridad',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
@@ -390,7 +394,7 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
                           color: snap['status']!.contains('Aprobado')
                               ? Colors.green
                               : snap['status']!.contains('Alerta')
-                                  ? Colors.orange
+                                  ? theme.colorScheme.secondary
                                   : Colors.grey,
                         ),
                       ),
@@ -463,9 +467,18 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
 
                 // PTT Speak Button
                 GestureDetector(
-                  onTapDown: (_) => setState(() => isTalking = true),
-                  onTapUp: (_) => setState(() => isTalking = false),
-                  onTapCancel: () => setState(() => isTalking = false),
+                  onTapDown: (_) async {
+                    setState(() => isTalking = true);
+                    await _audioService.iniciarMicrofono();
+                  },
+                  onTapUp: (_) async {
+                    setState(() => isTalking = false);
+                    await _audioService.detenerMicrofono();
+                  },
+                  onTapCancel: () async {
+                    setState(() => isTalking = false);
+                    await _audioService.detenerMicrofono();
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     width: 120,
@@ -549,86 +562,127 @@ class _CameraScreenState extends State<CameraScreen> with TickerProviderStateMix
 
   // Vector / Stylized mock feed rendering for surveillance feel
   Widget _buildCameraMockupFeed(AppState state) {
-    final hasIntruder = state.aiStatus.contains('Intruso');
-    final isMax = state.aiStatus.contains('Max');
-    
-    return Container(
-      width: double.infinity,
-      height: 250,
-      decoration: BoxDecoration(
-        color: state.infraredLight ? const Color(0xFF071F0F) : const Color(0xFF1E2429),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Cyber style scanning grids
-          Opacity(
-            opacity: 0.15,
-            child: GridPaper(
-              color: state.infraredLight ? Colors.green : Colors.blueGrey,
-              interval: 40.0,
-              subdivisions: 1,
-            ),
-          ),
-
-          // Central target crosshair
-          Opacity(
-            opacity: 0.25,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: state.infraredLight ? Colors.green : Colors.white,
-                  width: 1,
-                ),
-              ),
-            ),
-          ),
-
-          // Stylized Vector Shape representing pet zone
-          Column(
+    if (!state.isConnected) {
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                LucideIcons.pawPrint,
-                size: 72,
-                color: state.infraredLight
-                    ? Colors.green.withOpacity(0.4)
-                    : Colors.white24,
-              ),
-              const SizedBox(height: 12),
+              Icon(LucideIcons.wifiOff, color: Colors.red, size: 48),
+              SizedBox(height: 12),
               Text(
-                'ZONA DE ALIMENTO ACTIVA',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.5,
-                  color: state.infraredLight
-                      ? Colors.green.withOpacity(0.5)
-                      : Colors.white24,
+                'Sin conexión con el dispensador',
+                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final streamUrl = 'http://${state.esp32CamIP}/stream';
+
+    return Image.network(
+      streamUrl,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: 250,
+      gaplessPlayback: true,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          width: double.infinity,
+          height: 250,
+          decoration: BoxDecoration(
+            color: state.infraredLight ? const Color(0xFF071F0F) : const Color(0xFF1E2429),
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Cyber style scanning grids
+              Opacity(
+                opacity: 0.15,
+                child: GridPaper(
+                  color: state.infraredLight ? Colors.green : Colors.blueGrey,
+                  interval: 40.0,
+                  subdivisions: 1,
+                ),
+              ),
+
+              // Central target crosshair
+              Opacity(
+                opacity: 0.25,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: state.infraredLight ? Colors.green : Colors.white,
+                      width: 1,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Stylized Vector Shape representing pet zone
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    LucideIcons.pawPrint,
+                    size: 72,
+                    color: state.infraredLight
+                        ? Colors.green.withOpacity(0.4)
+                        : Colors.white24,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'CÁMARA FÍSICA DESCONECTADA',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                      color: state.infraredLight
+                          ? Colors.green.withOpacity(0.5)
+                          : Colors.redAccent.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Verifique stream en http://${state.esp32CamIP}/stream',
+                    style: const TextStyle(
+                      fontSize: 8,
+                      color: Colors.white30,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Real-time camera metadata footer
+              Positioned(
+                bottom: 12,
+                right: 12,
+                child: Text(
+                  'SIGNAL: ${state.wifiSignal}dBm   FPS: 0.0fps (OFFLINE)',
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 8,
+                    color: state.infraredLight ? Colors.green : Colors.white38,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-
-          // Real-time camera metadata footer
-          Positioned(
-            bottom: 12,
-            right: 12,
-            child: Text(
-              'SIGNAL: ${state.wifiSignal}dBm   FPS: 15.0fps',
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 8,
-                color: state.infraredLight ? Colors.green : Colors.white38,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
     );
   }
 

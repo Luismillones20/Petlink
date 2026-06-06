@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../state/app_state.dart';
+import '../models/schedule.dart';
 
 class ScheduleScreen extends StatelessWidget {
   const ScheduleScreen({Key? key}) : super(key: key);
@@ -47,14 +48,7 @@ class ScheduleScreen extends StatelessWidget {
                 ],
               ),
               ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Añadir nuevo horario (Simulado para esta versión)'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
+                onPressed: () => _showAddScheduleDialog(context, state),
                 icon: const Icon(LucideIcons.plus, size: 16, color: Colors.white),
                 label: const Text('Nuevo', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
                 style: ElevatedButton.styleFrom(
@@ -93,12 +87,12 @@ class ScheduleScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isFood ? Colors.orange.withOpacity(0.12) : Colors.blue.withOpacity(0.12),
+                        color: isFood ? theme.primaryColor.withOpacity(0.12) : theme.colorScheme.secondary.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
                         isFood ? LucideIcons.bone : LucideIcons.droplets,
-                        color: isFood ? theme.primaryColor : Colors.blue,
+                        color: isFood ? theme.primaryColor : theme.colorScheme.secondary,
                         size: 22,
                       ),
                     ),
@@ -118,17 +112,17 @@ class ScheduleScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF39C12).withOpacity(0.15),
+                                    color: theme.colorScheme.secondary.withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     children: [
-                                      Icon(LucideIcons.shield, color: Color(0xFFE67E22), size: 9),
-                                      SizedBox(width: 3),
+                                      Icon(LucideIcons.shield, color: theme.colorScheme.secondary, size: 9),
+                                      const SizedBox(width: 3),
                                       Text(
                                         'IA',
                                         style: TextStyle(
-                                          color: Color(0xFFE67E22),
+                                          color: theme.colorScheme.secondary,
                                           fontSize: 8,
                                           fontWeight: FontWeight.w900,
                                         ),
@@ -161,6 +155,18 @@ class ScheduleScreen extends StatelessWidget {
                       onChanged: (_) => state.toggleSchedule(schedule.id),
                       activeColor: theme.primaryColor,
                     ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.trash2, color: Colors.red, size: 20),
+                      onPressed: () {
+                        state.deleteSchedule(schedule.id);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Horario eliminado'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
                 children: [
@@ -172,10 +178,10 @@ class ScheduleScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
-                          children: const [
-                            Icon(LucideIcons.shield, color: Color(0xFFF39C12), size: 16),
-                            SizedBox(width: 8),
-                            Text(
+                          children: [
+                            Icon(LucideIcons.shield, color: theme.colorScheme.secondary, size: 16),
+                            const SizedBox(width: 8),
+                            const Text(
                               'Validar con IA (ESP32-CAM)',
                               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                             ),
@@ -213,7 +219,7 @@ class ScheduleScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w900,
-                              color: isFood ? theme.primaryColor : Colors.blue,
+                              color: isFood ? theme.primaryColor : theme.colorScheme.secondary,
                             ),
                           ),
                         ],
@@ -224,8 +230,8 @@ class ScheduleScreen extends StatelessWidget {
                         min: isFood ? 20.0 : 50.0,
                         max: isFood ? 150.0 : 300.0,
                         divisions: isFood ? 13 : 5,
-                        activeColor: isFood ? theme.primaryColor : Colors.blue,
-                        inactiveColor: (isFood ? theme.primaryColor : Colors.blue).withOpacity(0.15),
+                        activeColor: isFood ? theme.primaryColor : theme.colorScheme.secondary,
+                        inactiveColor: (isFood ? theme.primaryColor : theme.colorScheme.secondary).withOpacity(0.15),
                         onChanged: schedule.active
                             ? (val) => state.updateSchedulePortion(schedule.id, val.round())
                             : null,
@@ -257,10 +263,10 @@ class ScheduleScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  children: const [
-                    Icon(LucideIcons.triangleAlert, color: Colors.orange, size: 20),
-                    SizedBox(width: 8),
-                    Text(
+                  children: [
+                    Icon(LucideIcons.triangleAlert, color: theme.primaryColor, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
                       'Límites Diarios y Prevención',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
@@ -299,8 +305,8 @@ class ScheduleScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.orange,
-                            consumptionRatio > 0.8 ? Colors.red : Colors.green,
+                            theme.primaryColor,
+                            consumptionRatio > 0.8 ? Colors.red : theme.colorScheme.secondary,
                           ],
                         ),
                         borderRadius: BorderRadius.circular(5),
@@ -328,19 +334,19 @@ class ScheduleScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.08),
+                    color: theme.colorScheme.secondary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.activity, color: Colors.blue, size: 18),
+                      Icon(LucideIcons.activity, color: theme.colorScheme.secondary, size: 18),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'El sensor de peso del Arduino Mega detendrá las dispensaciones automáticas si el plato tiene más de 220g para evitar derrames.',
                           style: TextStyle(
                             fontSize: 10,
-                            color: isDark ? Colors.blue[200] : Colors.blue[800],
+                            color: theme.colorScheme.secondary,
                             height: 1.4,
                             fontWeight: FontWeight.bold,
                           ),
@@ -375,6 +381,117 @@ class ScheduleScreen extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
         ),
       ],
+    );
+  }
+
+  void _showAddScheduleDialog(BuildContext context, AppState state) async {
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (pickedTime == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        String type = 'food';
+        int portion = 80;
+        bool validateAI = false;
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Nuevo Horario', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    decoration: const InputDecoration(labelText: 'Tipo de Dispensación'),
+                    items: const [
+                      DropdownMenuItem(value: 'food', child: Text('Comida')),
+                      DropdownMenuItem(value: 'water', child: Text('Agua')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          type = val;
+                          portion = type == 'food' ? 80 : 200;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(type == 'food' ? 'Porción (gramos)' : 'Volumen (ml)'),
+                      Text('${portion}${type == 'food' ? 'g' : 'ml'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  Slider(
+                    value: portion.toDouble(),
+                    min: type == 'food' ? 20.0 : 50.0,
+                    max: type == 'food' ? 150.0 : 300.0,
+                    divisions: type == 'food' ? 13 : 5,
+                    onChanged: (val) {
+                      setDialogState(() {
+                        portion = val.round();
+                      });
+                    },
+                  ),
+                  if (type == 'food') ...[
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      title: const Text('Validar con IA (ESP32-CAM)', style: TextStyle(fontSize: 13)),
+                      value: validateAI,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          validateAI = val;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final hourStr = pickedTime.hour.toString().padLeft(2, '0');
+                    final minStr = pickedTime.minute.toString().padLeft(2, '0');
+                    final amPm = pickedTime.period == DayPeriod.am ? 'AM' : 'PM';
+                    final timeStr = '${hourStr}:${minStr} ${amPm}';
+                    
+                    state.addSchedule(ScheduleModel(
+                      id: DateTime.now().millisecondsSinceEpoch,
+                      type: type,
+                      time: timeStr,
+                      amount: type == 'food' ? '${portion}g' : 'Llenar',
+                      portionGrams: portion,
+                      validateWithAI: validateAI,
+                      active: true,
+                    ));
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Horario programado con éxito'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

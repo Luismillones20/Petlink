@@ -18,7 +18,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
     final state = Provider.of<AppState>(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final cardColor = theme.cardColor;
 
     // Filter alerts list based on selection
     final filteredAlerts = state.alerts.where((alert) {
@@ -105,13 +105,13 @@ class _AlertsScreenState extends State<AlertsScreen> {
                       iconColor = theme.primaryColor;
                     } else if (alert.type == 'bark') {
                       iconData = LucideIcons.volume2;
-                      iconColor = Colors.orange;
+                      iconColor = theme.colorScheme.secondary;
                     } else if (alert.type == 'ai_alert') {
                       iconData = LucideIcons.shield;
                       iconColor = Colors.red;
                     } else if (alert.type == 'water_req') {
                       iconData = LucideIcons.droplets;
-                      iconColor = Colors.blue;
+                      iconColor = theme.colorScheme.secondary;
                     }
 
                     return Container(
@@ -292,7 +292,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
             : (isDark ? Colors.white54 : Colors.black54),
       ),
       selectedColor: theme.primaryColor,
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.grey[200],
+      backgroundColor: isDark ? theme.cardColor : Colors.grey[200],
       checkmarkColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       onSelected: (bool selected) {

@@ -12,6 +12,7 @@ import './index.css';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('petlink_gemini_api_key') || '');
 
   // --- HEALTH & STATS ENGINE STATE ---
   const [todayFoodIntake, setTodayFoodIntake] = useState(160);
@@ -107,7 +108,7 @@ export default function App() {
             </span>
           </div>
           <img 
-            src={`https://api.dicebear.com/7.x/notionists/svg?seed=Max&backgroundColor=F39C12`} 
+            src={`https://api.dicebear.com/7.x/notionists/svg?seed=Max&backgroundColor=00D4AA`} 
             alt="Profile" 
             style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid var(--border-color)' }}
           />
@@ -134,13 +135,19 @@ export default function App() {
             eatingSpeed={eatingSpeed}
             todayFeedingLogs={todayFeedingLogs}
             onClose={() => setActiveTab('dashboard')}
+            customApiKey={customApiKey}
           />
         )}
         {activeTab === 'camera' && <CameraScreen />}
         {activeTab === 'schedule' && <ScheduleScreen />}
         {activeTab === 'alerts' && <AlertsScreen alerts={alerts} setAlerts={setAlerts} />}
         {activeTab === 'config' && (
-          <ConfigScreen isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+          <ConfigScreen 
+            isDarkMode={isDarkMode} 
+            setIsDarkMode={setIsDarkMode} 
+            customApiKey={customApiKey}
+            setCustomApiKey={setCustomApiKey}
+          />
         )}
       </main>
 
@@ -157,6 +164,7 @@ export default function App() {
         todayFoodIntake={todayFoodIntake}
         todayWaterIntake={todayWaterIntake}
         eatingSpeed={eatingSpeed}
+        customApiKey={customApiKey}
       />
     </div>
   );
@@ -235,7 +243,7 @@ function DashboardScreen({ foodLevel, waterLevel, foodWeight, lastFed, onFeed, o
       <div 
         onClick={onOpenStats}
         style={{
-          background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 100%)',
+          background: 'linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%)',
           borderRadius: '16px',
           padding: '16px',
           display: 'flex',
@@ -249,7 +257,7 @@ function DashboardScreen({ foodLevel, waterLevel, foodWeight, lastFed, onFeed, o
         className="hover-scale"
       >
         <div style={{ backgroundColor: 'rgba(255,255,255,0.12)', padding: '10px', borderRadius: '50%', display: 'flex' }}>
-          <PawPrint color="var(--primary)" size={20} />
+          <PawPrint color="white" size={20} />
         </div>
         <div style={{ flex: 1 }}>
           <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 'bold', color: 'white' }}>Análisis de Salud de Max</h4>
@@ -266,7 +274,7 @@ function DashboardScreen({ foodLevel, waterLevel, foodWeight, lastFed, onFeed, o
         <h3 style={{ marginBottom: '20px', fontSize: '1.1rem' }}>Estado de Contenedores</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <ProgressBar value={foodLevel} icon={<Bone size={18} color="var(--primary)" />} />
-          <ProgressBar value={waterLevel} icon={<Droplet size={18} color="#3498DB" />} />
+          <ProgressBar value={waterLevel} icon={<Droplet size={18} color="var(--secondary)" />} color="var(--secondary)" />
         </div>
       </div>
 
@@ -276,7 +284,7 @@ function DashboardScreen({ foodLevel, waterLevel, foodWeight, lastFed, onFeed, o
         <button className="btn" onClick={onFeed} style={{ flex: 1 }}>
           <Bone size={20} /> Alimentar
         </button>
-        <button className="btn" onClick={onWater} style={{ flex: 1, backgroundColor: '#3498DB' }}>
+        <button className="btn" onClick={onWater} style={{ flex: 1, background: 'linear-gradient(135deg, var(--secondary) 0%, #1e1b4b 100%)', boxShadow: '0 4px 14px rgba(67, 56, 202, 0.25)' }}>
           <Droplet size={20} /> Agua
         </button>
       </div>
@@ -447,13 +455,13 @@ function AlertsScreen({ alerts, setAlerts }) {
   );
 }
 
-function ConfigScreen({ isDarkMode, setIsDarkMode }) {
+function ConfigScreen({ isDarkMode, setIsDarkMode, customApiKey, setCustomApiKey }) {
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
         <img 
-          src={`https://api.dicebear.com/7.x/notionists/svg?seed=Max&backgroundColor=F39C12`} 
+          src={`https://api.dicebear.com/7.x/notionists/svg?seed=Max&backgroundColor=00D4AA`} 
           alt="Profile" 
           style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--border-color)' }}
         />
@@ -490,21 +498,6 @@ function ConfigScreen({ isDarkMode, setIsDarkMode }) {
         </div>
       </div>
 
-      <div className="card">
-        <h4 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Wifi size={18} /> Conexión Sistema
-        </h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div>
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Broker MQTT</label>
-            <div style={{ padding: '8px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', fontSize: '0.9rem', marginTop: '4px' }}>mqtt://broker.hivemq.com:1883</div>
-          </div>
-          <div>
-            <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Dispositivo ID</label>
-            <div style={{ padding: '8px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', fontSize: '0.9rem', marginTop: '4px' }}>ESP8266_UTEC_2026</div>
-          </div>
-        </div>
-      </div>
       
       <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '20px' }}>
         PetLink v1.0.0 (UTEC 2026)<br/>
@@ -518,7 +511,7 @@ function ConfigScreen({ isDarkMode, setIsDarkMode }) {
 function StatisticsScreen({ 
   todayFoodIntake, todayWaterIntake, petWeight, 
   dailyCaloricTarget, dailyWaterTarget, dailyFoodTarget, 
-  eatingSpeed, todayFeedingLogs, onClose 
+  eatingSpeed, todayFeedingLogs, onClose, customApiKey 
 }) {
   const [activeSubTab, setActiveSubTab] = useState('diario');
   const [aiRecs, setAiRecs] = useState(null);
@@ -527,7 +520,8 @@ function StatisticsScreen({
   useEffect(() => {
     if (activeSubTab === 'salud' && !aiRecs) {
       setLoadingAi(true);
-      fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
+      const activeKey = (customApiKey && customApiKey.trim() !== '') ? customApiKey.trim() : (import.meta.env.VITE_GEMINI_API_KEY || '');
+      fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -545,7 +539,13 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
           ]
         })
       })
-      .then(res => res.json())
+      .then(async (res) => {
+        const data = await res.json();
+        if (data.error) {
+          throw new Error(data.error.message || 'Error en la respuesta de Gemini');
+        }
+        return data;
+      })
       .then(data => {
         try {
           const text = data.candidates[0].content.parts[0].text;
@@ -560,11 +560,12 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
         }
         setLoadingAi(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error(err);
         setAiRecs([
+          "⚠️ Error al conectar con Gemini. Revisa que tu API Key sea correcta y que no tenga restricciones (Key Restrictions) de Google Cloud Console.",
           "⏱️ Ritmo de alimentación óptimo registrado en la balanza HX711.",
-          "💧 Max mantiene un consumo de agua excelente de acuerdo a su peso corporal.",
-          "🍖 El balance calórico diario es correcto para su nivel de actividad física."
+          "💧 Max mantiene un consumo de agua excelente de acuerdo a su peso corporal."
         ]);
         setLoadingAi(false);
       });
@@ -584,7 +585,7 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
     hydrationColor = 'var(--success)';
   } else if (mlPerKg >= 30.0) {
     hydrationStatus = 'Bueno';
-    hydrationColor = '#3498DB';
+    hydrationColor = 'var(--secondary)';
   }
 
   // Monthly Data
@@ -651,13 +652,13 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                   <path
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
-                    stroke="rgba(52, 152, 219, 0.1)"
+                    stroke="rgba(67, 56, 202, 0.1)"
                     strokeWidth="3"
                   />
                   <path
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
-                    stroke="#3498DB"
+                    stroke="var(--secondary)"
                     strokeWidth="3"
                     strokeDasharray={`${waterPercent * 100}, 100`}
                     strokeLinecap="round"
@@ -668,7 +669,7 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                   <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>mL / 600</span>
                 </div>
               </div>
-              <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: waterPercent >= 1 ? 'var(--success)' : '#3498DB', marginTop: '12px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: waterPercent >= 1 ? 'var(--success)' : 'var(--secondary)', marginTop: '12px' }}>
                 {waterPercent >= 1 ? '¡Meta Completada!' : `Faltan ${Math.max(0, 600 - todayWaterIntake)} mL`}
               </span>
             </div>
@@ -683,7 +684,7 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                   <path
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                     fill="none"
-                    stroke="rgba(243, 156, 18, 0.1)"
+                    stroke="rgba(0, 184, 148, 0.1)"
                     strokeWidth="3"
                   />
                   <path
@@ -757,10 +758,10 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                 <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: idx < todayFeedingLogs.length - 1 ? '8px' : '0', borderBottom: idx < todayFeedingLogs.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ 
-                      backgroundColor: log.type === 'Manual' ? 'rgba(243, 156, 18, 0.12)' : 'rgba(46, 204, 113, 0.12)', 
+                      backgroundColor: log.type === 'Manual' ? 'rgba(67, 56, 202, 0.12)' : 'rgba(0, 184, 148, 0.12)', 
                       padding: '6px', borderRadius: '50%', display: 'flex' 
                     }}>
-                      <Bone size={12} color={log.type === 'Manual' ? 'var(--primary)' : 'var(--success)'} />
+                      <Bone size={12} color={log.type === 'Manual' ? 'var(--secondary)' : 'var(--primary)'} />
                     </div>
                     <div>
                       <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
@@ -769,7 +770,7 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                       <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>{log.time}</div>
                     </div>
                   </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#16A085' }}>+{log.amount}g</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#10B981' }}>+{log.amount}g</span>
                 </div>
               ))}
             </div>
@@ -794,20 +795,20 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                 return (
                   <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, height: '100%', justifyContent: 'flex-end' }}>
                     <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', height: '100%', width: '100%', justifyContent: 'center' }}>
-                      {/* Food Bar (Orange) */}
+                      {/* Food Bar (Teal) */}
                       <div style={{ 
                         width: '8px', height: `${foodHeightPct}%`, 
-                        background: 'linear-gradient(to top, var(--primary), #E67E22)', 
+                        background: 'linear-gradient(to top, var(--primary), var(--primary-light))', 
                         borderRadius: '3px 3px 0 0' 
                       }}></div>
-                      {/* Water Bar (Blue) */}
+                      {/* Water Bar (Indigo) */}
                       <div style={{ 
                         width: '8px', height: `${waterHeightPct}%`, 
-                        background: 'linear-gradient(to top, #3498DB, #2980B9)', 
+                        background: 'linear-gradient(to top, var(--secondary), #818cf8)', 
                         borderRadius: '3px 3px 0 0' 
                       }}></div>
                     </div>
-                    <span style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginTop: '6px' }}>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', fontWeight: 'bold', marginTop: '6px' }}>
                       {monthLabels[idx]}
                     </span>
                   </div>
@@ -822,7 +823,7 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                 <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Comida (kg)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '10px', height: '10px', backgroundColor: '#3498DB', borderRadius: '2px' }}></div>
+                <div style={{ width: '10px', height: '10px', backgroundColor: 'var(--secondary)', borderRadius: '2px' }}></div>
                 <span style={{ fontSize: '0.65rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Agua (L)</span>
               </div>
             </div>
@@ -845,8 +846,8 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
               </div>
 
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <div style={{ backgroundColor: 'rgba(52, 152, 219, 0.1)', padding: '6px', borderRadius: '50%', display: 'flex' }}>
-                  <Droplet size={16} color="#3498DB" />
+                <div style={{ backgroundColor: 'rgba(67, 56, 202, 0.1)', padding: '6px', borderRadius: '50%', display: 'flex' }}>
+                  <Droplet size={16} color="var(--secondary)" />
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Consumo agua promedio</div>
@@ -863,8 +864,8 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Health Index */}
           <div style={{ 
-            background: 'linear-gradient(135deg, rgba(243, 156, 18, 0.12) 0%, rgba(230, 126, 34, 0.04) 100%)',
-            borderRadius: '16px', border: '1px solid rgba(243, 156, 18, 0.3)', padding: '16px',
+            background: 'linear-gradient(135deg, rgba(67, 56, 202, 0.12) 0%, rgba(0, 212, 170, 0.04) 100%)',
+            borderRadius: '16px', border: '1px solid rgba(0, 212, 170, 0.3)', padding: '16px',
             display: 'flex', flexDirection: 'column', alignItems: 'center'
           }}>
             <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -885,7 +886,7 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
                 <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Nutrición</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: '#3498DB' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: '900', color: 'var(--secondary)' }}>
                   {Math.round((todayWaterIntake / dailyWaterTarget) * 100)}%
                 </span>
                 <span style={{ fontSize: '0.55rem', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Hidratación</span>
@@ -951,7 +952,7 @@ Devuelve una lista separada por saltos de línea con los 3 consejos (sin título
 }
 
 // --- NEW COMPONENT: AI CHATBOT WIDGET ---
-function AiChatbotWidget({ todayFoodIntake, todayWaterIntake, eatingSpeed }) {
+function AiChatbotWidget({ todayFoodIntake, todayWaterIntake, eatingSpeed, customApiKey }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: 'model', text: '¡Hola! Soy PetLink AI, tu asistente veterinario inteligente. ¿Cómo puedo ayudarte hoy con el cuidado, la alimentación, el agua o la salud de Max?' }
@@ -970,8 +971,9 @@ function AiChatbotWidget({ todayFoodIntake, todayWaterIntake, eatingSpeed }) {
 
     try {
       const chatHistoryPrompt = messages.map(m => `${m.role === 'user' ? 'Dueño' : 'PetLink AI'}: ${m.text}`).join('\n');
+      const activeKey = (customApiKey && customApiKey.trim() !== '') ? customApiKey.trim() : (import.meta.env.VITE_GEMINI_API_KEY || '');
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -995,10 +997,21 @@ PetLink AI:`
       });
 
       const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message || 'Error en la respuesta de Gemini');
+      }
       const botText = data.candidates[0].content.parts[0].text;
       setMessages(prev => [...prev, { role: 'model', text: botText }]);
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'model', text: 'Lo siento, no he podido conectarme a la nube de Gemini. Por favor verifica tu API Key.' }]);
+      console.error(error);
+      const errMsg = error.message || '';
+      let replyText = 'Lo siento, no he podido conectarme a la nube de Gemini. ';
+      if (errMsg.includes('API key') || errMsg.includes('restricted') || errMsg.includes('invalid') || errMsg.includes('not found')) {
+        replyText += 'Asegúrate de que tu API Key sea correcta y de que no tenga restricciones activas (Key Restrictions) bloqueando la Generative Language API en Google Cloud Console.';
+      } else {
+        replyText += 'Por favor verifica tu conexión a internet o la configuración de tu API Key.';
+      }
+      setMessages(prev => [...prev, { role: 'model', text: replyText }]);
     } finally {
       setIsTyping(false);
     }
@@ -1026,32 +1039,33 @@ PetLink AI:`
       {/* Chat Window */}
       {isOpen && (
         <div style={{
-          width: '320px', height: '420px', borderRadius: '20px',
-          backgroundColor: 'var(--card-bg, #ffffff)', border: '1px solid var(--border-color)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column',
-          overflow: 'hidden', animation: 'fadeIn 0.2s ease'
-        }} className="card animate-fade-in">
+          width: '320px', height: '420px', borderRadius: '24px',
+          backgroundColor: 'var(--surface-solid)', border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column',
+          overflow: 'hidden'
+        }} className="animate-fade-in">
           {/* Header */}
           <div style={{
-            background: 'linear-gradient(135deg, #2C3E50 0%, #34495E 100%)',
-            padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            color: 'white'
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+            padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            color: 'white',
+            borderBottom: '1px solid var(--border-color)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ position: 'relative' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.12)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <Sparkles size={16} color="var(--primary)" />
                 </div>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)', position: 'absolute', bottom: 0, right: 0, border: '1.5px solid #2C3E50' }}></div>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)', position: 'absolute', bottom: 0, right: 0, border: '1.5px solid #1E293B' }}></div>
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 'bold', color: 'white' }}>PetLink AI</h4>
-                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.7)', fontWeight: 'bold' }}>Veterinario Virtual</span>
+                <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: '800', color: 'white' }}>PetLink AI</h4>
+                <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.65)', fontWeight: 'bold' }}>Asistente Virtual</span>
               </div>
             </div>
             <button 
               onClick={() => setIsOpen(false)}
-              style={{ background: 'none', border: 'none', color: 'white', opacity: 0.8, cursor: 'pointer', fontSize: '1.1rem', padding: '4px' }}
+              style={{ background: 'none', border: 'none', color: 'white', opacity: 0.8, cursor: 'pointer', display: 'flex', padding: '4px' }}
             >
               <X size={18} />
             </button>
@@ -1060,21 +1074,22 @@ PetLink AI:`
           {/* Messages */}
           <div style={{
             flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px',
-            backgroundColor: 'var(--bg-color, #f8fafc)'
+            backgroundColor: 'var(--bg-color)'
           }}>
             {messages.map((m, idx) => (
               <div 
                 key={idx} 
+                className="chat-bubble"
                 style={{
                   alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                  maxWidth: '80%',
+                  maxWidth: '85%',
                   padding: '10px 14px',
-                  borderRadius: m.role === 'user' ? '16px 16px 2px 16px' : '16px 16px 16px 2px',
-                  backgroundColor: m.role === 'user' ? 'var(--primary)' : 'var(--card-bg, #ffffff)',
+                  borderRadius: m.role === 'user' ? '18px 18px 2px 18px' : '18px 18px 18px 2px',
+                  backgroundColor: m.role === 'user' ? 'var(--primary)' : 'var(--surface-solid)',
                   color: m.role === 'user' ? 'white' : 'var(--text-primary)',
                   fontSize: '0.75rem',
-                  lineHeight: 1.35,
-                  boxShadow: m.role === 'user' ? 'none' : '0 2px 8px rgba(0,0,0,0.04)',
+                  lineHeight: 1.4,
+                  boxShadow: 'var(--shadow-sm)',
                   border: m.role === 'user' ? 'none' : '1px solid var(--border-color)'
                 }}
               >
@@ -1082,11 +1097,16 @@ PetLink AI:`
               </div>
             ))}
             {isTyping && (
-              <div style={{
-                alignSelf: 'flex-start', padding: '8px 12px', borderRadius: '12px',
-                backgroundColor: 'var(--card-bg, #ffffff)', border: '1px solid var(--border-color)',
-                fontSize: '0.7rem', color: 'var(--text-secondary)'
-              }}>
+              <div 
+                className="chat-bubble"
+                style={{
+                  alignSelf: 'flex-start', padding: '10px 14px', borderRadius: '18px 18px 18px 2px',
+                  backgroundColor: 'var(--surface-solid)', border: '1px solid var(--border-color)',
+                  fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                <div className="animate-pulse-indicator" style={{ width: '6px', height: '6px', backgroundColor: 'var(--primary)', borderRadius: '50%' }}></div>
                 PetLink AI está escribiendo...
               </div>
             )}
@@ -1094,8 +1114,8 @@ PetLink AI:`
 
           {/* Input Form */}
           <form onSubmit={handleSend} style={{
-            padding: '10px 16px', display: 'flex', gap: '8px', borderTop: '1px solid var(--border-color)',
-            backgroundColor: 'var(--card-bg, #ffffff)'
+            padding: '12px 16px', display: 'flex', gap: '8px', borderTop: '1px solid var(--border-color)',
+            backgroundColor: 'var(--surface-solid)'
           }}>
             <input 
               type="text"
@@ -1103,16 +1123,16 @@ PetLink AI:`
               onChange={e => setInput(e.target.value)}
               placeholder="Pregúntame sobre Max..."
               style={{
-                flex: 1, padding: '8px 12px', borderRadius: '20px', border: '1px solid var(--border-color)',
-                fontSize: '0.75rem', outline: 'none', backgroundColor: 'var(--bg-color)'
+                flex: 1, padding: '10px 14px', borderRadius: '24px', border: '1px solid var(--border-color)',
+                fontSize: '0.78rem', outline: 'none', backgroundColor: 'var(--bg-color)', color: 'var(--text-primary)'
               }}
             />
             <button 
               type="submit"
               style={{
-                width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary)',
+                width: '34px', height: '34px', borderRadius: '50%', backgroundColor: 'var(--primary)',
                 border: 'none', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center',
-                cursor: 'pointer'
+                cursor: 'pointer', boxShadow: '0 2px 8px rgba(255, 143, 0, 0.35)'
               }}
             >
               <Send size={14} />
